@@ -730,400 +730,66 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.edit-sale-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const saleId = parseInt(this.getAttribute('data-sale-id'));
-                try {
-                    const editWin = window.open('', 'EditSale', 'width=800,height=800,resizable=yes');
-                    if (!editWin) {
-                        showAlert('Pop-up blocked. Please allow pop-ups for this site and try again.');
-                        return;
-                    }
-                    const doc = editWin.document;
-                    doc.title = 'Edit Sale';
-                    const linkFA = doc.createElement('link');
-                    linkFA.rel = 'stylesheet';
-                    linkFA.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
-                    doc.head.appendChild(linkFA);
-                    const scriptTW = doc.createElement('script');
-                    scriptTW.src = 'https://cdn.tailwindcss.com';
-                    doc.head.appendChild(scriptTW);
-                    const style = doc.createElement('style');
-                    style.textContent = `
-                        body { font-family: 'Inter', sans-serif; background-color: #ffffff; padding: 1.5rem; }
-                        button, input, select { transition: all 200ms; }
-                        .form-input { border-color: #d1d5db; }
-                        .form-input:focus { ring-color: #3b82f6; border-color: #3b82f6; }
-                        .btn-primary { background-color: #22c55e; }
-                        .btn-primary:hover { background-color: #16a34a; }
-                        .btn-secondary { background-color: #9ca3af; }
-                        .btn-secondary:hover { background-color: #6b7280; }
-                        .service-row { background-color: #ffffff; border-radius: 0.5rem; padding: 0.5rem; }
-                    `;
-                    doc.head.appendChild(style);
-                    const mainDiv = doc.createElement('div');
-                    mainDiv.className = 'bg-white shadow-xl rounded-xl p-6 border border-gray-200';
-                    const headerDiv = doc.createElement('div');
-                    headerDiv.className = 'flex justify-between items-center mb-6';
-                    const h3 = doc.createElement('h3');
-                    h3.className = 'text-2xl font-bold text-gray-800 flex items-center';
-                    h3.innerHTML = '<i class="fas fa-edit mr-2 text-blue-600"></i> Edit Sale';
-                    headerDiv.appendChild(h3);
-                    const closeBtn = doc.createElement('button');
-                    closeBtn.className = 'text-gray-400 hover:text-gray-600 transition-colors';
-                    closeBtn.innerHTML = '<i class="fas fa-times text-xl"></i>';
-                    closeBtn.onclick = () => editWin.close();
-                    headerDiv.appendChild(closeBtn);
-                    mainDiv.appendChild(headerDiv);
-                    const form = doc.createElement('form');
-                    form.id = 'edit-sale-form';
-                    form.className = 'space-y-6';
-                    mainDiv.appendChild(form);
-                    const hiddenId = doc.createElement('input');
-                    hiddenId.type = 'hidden';
-                    hiddenId.id = 'edit-sale-id';
-                    hiddenId.value = saleId;
-                    form.appendChild(hiddenId);
-                    const gridDiv = doc.createElement('div');
-                    gridDiv.className = 'grid grid-cols-1 md:grid-cols-2 gap-6';
-                    form.appendChild(gridDiv);
-                    const customerCodeDiv = doc.createElement('div');
-                    const customerCodeLabel = doc.createElement('label');
-                    customerCodeLabel.htmlFor = 'edit-sale-customer-code';
-                    customerCodeLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
-                    customerCodeLabel.textContent = 'Customer Code';
-                    customerCodeDiv.appendChild(customerCodeLabel);
-                    const customerCodeInput = doc.createElement('input');
-                    customerCodeInput.type = 'text';
-                    customerCodeInput.id = 'edit-sale-customer-code';
-                    customerCodeInput.className = 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input';
-                    customerCodeDiv.appendChild(customerCodeInput);
-                    gridDiv.appendChild(customerCodeDiv);
-                    const customerDiv = doc.createElement('div');
-                    const customerLabel = doc.createElement('label');
-                    customerLabel.htmlFor = 'edit-sale-customer-name';
-                    customerLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
-                    customerLabel.textContent = 'Customer Name';
-                    customerDiv.appendChild(customerLabel);
-                    const customerNameInput = doc.createElement('input');
-                    customerNameInput.type = 'text';
-                    customerNameInput.id = 'edit-sale-customer-name';
-                    customerNameInput.className = 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input';
-                    customerNameInput.readOnly = true;
-                    customerNameInput.placeholder = 'Customer name will appear here...';
-                    customerDiv.appendChild(customerNameInput);
-                    const customerSelect = doc.createElement('input');
-                    customerSelect.type = 'hidden';
-                    customerSelect.id = 'edit-sale-customer';
-                    customerSelect.required = true;
-                    customerDiv.appendChild(customerSelect);
-                    gridDiv.appendChild(customerDiv);
-                    const dateDiv = doc.createElement('div');
-                    const dateLabel = doc.createElement('label');
-                    dateLabel.htmlFor = 'edit-sale-date';
-                    dateLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
-                    dateLabel.textContent = 'Date';
-                    dateDiv.appendChild(dateLabel);
-                    const dateInput = doc.createElement('input');
-                    dateInput.type = 'date';
-                    dateInput.id = 'edit-sale-date';
-                    dateInput.className = 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input';
-                    dateInput.required = true;
-                    dateDiv.appendChild(dateInput);
-                    gridDiv.appendChild(dateDiv);
-                    const referralDiv = doc.createElement('div');
-                    referralDiv.className = 'md:col-span-2';
-                    const referralLabel = doc.createElement('label');
-                    referralLabel.htmlFor = 'edit-sale-referral';
-                    referralLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
-                    referralLabel.textContent = 'Referrer Code (auto-filled if referred)';
-                    referralDiv.appendChild(referralLabel);
-                    const referralInput = doc.createElement('input');
-                    referralInput.type = 'text';
-                    referralInput.id = 'edit-sale-referral';
-                    referralInput.className = 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input';
-                    referralDiv.appendChild(referralInput);
-                    form.appendChild(referralDiv);
-                    const servicesDiv = doc.createElement('div');
-                    servicesDiv.className = 'md:col-span-2';
-                    const servicesLabel = doc.createElement('label');
-                    servicesLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
-                    servicesLabel.textContent = 'Services';
-                    servicesDiv.appendChild(servicesLabel);
-                    const servicesContainer = doc.createElement('div');
-                    servicesContainer.id = 'edit-sale-services-container';
-                    servicesContainer.className = 'space-y-4';
-                    servicesDiv.appendChild(servicesContainer);
-                    const addServiceBtn = doc.createElement('button');
-                    addServiceBtn.type = 'button';
-                    addServiceBtn.id = 'edit-add-service-btn';
-                    addServiceBtn.className = 'text-blue-600 text-sm hover:text-blue-800 flex items-center';
-                    addServiceBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> Add Another Service';
-                    servicesDiv.appendChild(addServiceBtn);
-                    form.appendChild(servicesDiv);
-                    const discountDiv = doc.createElement('div');
-                    discountDiv.className = 'md:col-span-2';
-                    const discountLabel = doc.createElement('label');
-                    discountLabel.htmlFor = 'edit-sale-discount';
-                    discountLabel.className = 'block text-sm font-medium text-gray-700 mb-1';
-                    discountLabel.textContent = 'Discount';
-                    discountDiv.appendChild(discountLabel);
-                    const discountInput = doc.createElement('input');
-                    discountInput.type = 'number';
-                    discountInput.id = 'edit-sale-discount';
-                    discountInput.className = 'w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input';
-                    discountInput.value = 0;
-                    discountDiv.appendChild(discountInput);
-                    form.appendChild(discountDiv);
-                    const totalDiv = doc.createElement('div');
-                    totalDiv.className = 'md:col-span-2 flex justify-between items-center mt-6';
-                    const totalText = doc.createElement('div');
-                    totalText.className = 'text-lg font-semibold text-gray-800 flex items-center';
-                    totalText.innerHTML = '<i class="fas fa-calculator mr-2 text-green-600"></i> Total: <span id="edit-sale-total" class="ml-2 text-green-600">0.00</span>';
-                    totalDiv.appendChild(totalText);
-                    const btnGroup = doc.createElement('div');
-                    btnGroup.className = 'flex space-x-3';
-                    const cancelBtn = doc.createElement('button');
-                    cancelBtn.type = 'button';
-                    cancelBtn.className = 'bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors btn-secondary';
-                    cancelBtn.textContent = 'Cancel';
-                    cancelBtn.onclick = () => editWin.close();
-                    btnGroup.appendChild(cancelBtn);
-                    const saveBtn = doc.createElement('button');
-                    saveBtn.type = 'submit';
-                    saveBtn.className = 'bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-colors btn-primary';
-                    saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Changes';
-                    btnGroup.appendChild(saveBtn);
-                    totalDiv.appendChild(btnGroup);
-                    form.appendChild(totalDiv);
-                    doc.body.appendChild(mainDiv);
-                    const script = doc.createElement('script');
-                    script.textContent = `
-                        // Access parent window data
-                        const commissionRate = window.opener.commissionRate || 3;
-                        const customers = window.opener.customers || [];
-                        const sales = window.opener.sales || [];
-                        const referrals = window.opener.referrals || [];
-                        const affiliateCodes = window.opener.affiliateCodes || [];
-                        
-                        const saleId = parseInt(document.getElementById('edit-sale-id').value);
-                        const sale = sales.find(s => s.id === saleId);
-                        
-                        if (!sale) {
-                            alert('Sale not found');
-                            window.close();
-                        } else {
-                            // Populate form with sale data
-                            const customer = customers.find(c => c.id === sale.customerId);
-                            document.getElementById('edit-sale-customer-code').value = customer?.affiliateCode || '';
-                            
-                            // Populate customer name and hidden field
-                            const customerSelect = document.getElementById('edit-sale-customer');
-                            const customerNameInput = document.getElementById('edit-sale-customer-name');
-                            customerSelect.value = sale.customerId;
-                            customerNameInput.value = customer?.name || '';
-                            
-                            document.getElementById('edit-sale-date').value = sale.date;
-                            document.getElementById('edit-sale-referral').value = sale.referral || '';
-                            document.getElementById('edit-sale-discount').value = sale.discount || 0;
-                            
-                            // Populate services
-                            const servicesContainer = document.getElementById('edit-sale-services-container');
-                            servicesContainer.innerHTML = ''; // Clear existing
-                            
-                            (sale.servicesList || []).forEach(service => {
-                                const newDiv = document.createElement('div');
-                                newDiv.className = 'grid grid-cols-1 md:grid-cols-12 gap-4 service-row';
-                                newDiv.innerHTML = \`
-                                    <div class="md:col-span-5">
-                                        <input type="text" name="service-name" value="\${service.name}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
-                                    </div>
-                                    <div class="md:col-span-3">
-                                        <input type="number" name="service-price" value="\${service.price}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
-                                    </div>
-                                    <div class="md:col-span-3">
-                                        <input type="number" name="service-quantity" value="\${service.quantity}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
-                                    </div>
-                                    <div class="md:col-span-1 flex items-center justify-center">
-                                        <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                \`;
-                                servicesContainer.appendChild(newDiv);
-                                
-                                // Add event listeners
-                                newDiv.querySelectorAll('input').forEach(input => input.addEventListener('input', calculateTotal));
-                                newDiv.querySelector('.remove-service-btn').addEventListener('click', function() {
-                                    newDiv.remove();
-                                    calculateTotal();
-                                });
-                            });
-                            
-                            calculateTotal();
-                        }
+                const sale = sales.find(s => s.id === saleId);
 
-                        function calculateTotal() {
-                            let subtotal = 0;
-                            document.querySelectorAll('#edit-sale-services-container > div').forEach(div => {
-                                const price = parseFloat(div.querySelector('[name="service-price"]').value) || 0;
-                                const qty = parseInt(div.querySelector('[name="service-quantity"]').value) || 1;
-                                subtotal += price * qty;
-                            });
-                            const discount = parseFloat(document.getElementById('edit-sale-discount').value) || 0;
-                            document.getElementById('edit-sale-total').textContent = (subtotal - discount).toFixed(2);
-                        }
-
-                        document.getElementById('edit-add-service-btn').addEventListener('click', function() {
-                            const servicesContainer = document.getElementById('edit-sale-services-container');
-                            const newDiv = document.createElement('div');
-                            newDiv.className = 'grid grid-cols-1 md:grid-cols-12 gap-4 service-row';
-                            newDiv.innerHTML = \`
-                                <div class="md:col-span-5">
-                                    <input type="text" name="service-name" placeholder="Service description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
-                                </div>
-                                <div class="md:col-span-3">
-                                    <input type="number" name="service-price" placeholder="Price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
-                                </div>
-                                <div class="md:col-span-3">
-                                    <input type="number" name="service-quantity" placeholder="Qty" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="1">
-                                </div>
-                                <div class="md:col-span-1 flex items-center justify-center">
-                                    <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            \`;
-                            servicesContainer.appendChild(newDiv);
-                            newDiv.querySelectorAll('input').forEach(input => input.addEventListener('input', calculateTotal));
-                            newDiv.querySelector('.remove-service-btn').addEventListener('click', function() {
-                                newDiv.remove();
-                                calculateTotal();
-                            });
-                        });
-
-                        document.getElementById('edit-sale-discount').addEventListener('input', calculateTotal);
-
-                        // Auto-detect customer and referrer from customer code
-                        const customerCodeInput = document.getElementById('edit-sale-customer-code');
-                        const customerSelect = document.getElementById('edit-sale-customer');
-                        const customerNameInput = document.getElementById('edit-sale-customer-name');
-                        const referralInput = document.getElementById('edit-sale-referral');
-                        
-                        customerCodeInput.addEventListener('input', function() {
-                            const code = this.value.trim().toUpperCase();
-                            const matchingCustomer = customers.find(c => c.affiliateCode.toUpperCase() === code);
-                            if (matchingCustomer) {
-                                customerSelect.value = matchingCustomer.id;
-                                customerNameInput.value = matchingCustomer.name;
-                                referralInput.value = matchingCustomer.referredBy || '';
-                            } else {
-                                customerSelect.value = '';
-                                customerNameInput.value = '';
-                                referralInput.value = '';
-                            }
-                        });
-
-                        const form = document.getElementById('edit-sale-form');
-                        form.addEventListener('submit', async function(e) {
-                            e.preventDefault();
-                            
-                            // Get form data
-                            const customerId = parseInt(customerSelect.value);
-                            const date = document.getElementById('edit-sale-date').value;
-                            const referral = referralInput.value.trim();
-                            const discount = parseFloat(document.getElementById('edit-sale-discount').value) || 0;
-                            
-                            if (!customerId || !date) {
-                                alert('Please fill in required fields.');
-                                return;
-                            }
-                            
-                            // Collect services
-                            const serviceRows = document.querySelectorAll('#edit-sale-services-container .service-row');
-                            const servicesList = [];
-                            let hasValidService = false;
-                            
-                            serviceRows.forEach(row => {
-                                const name = row.querySelector('[name="service-name"]').value.trim();
-                                const price = parseFloat(row.querySelector('[name="service-price"]').value) || 0;
-                                const quantity = parseInt(row.querySelector('[name="service-quantity"]').value) || 1;
-                                
-                                if (name && price > 0) {
-                                    servicesList.push({ name, price, quantity });
-                                    hasValidService = true;
-                                }
-                            });
-                            
-                            if (!hasValidService) {
-                                alert('Please add at least one valid service.');
-                                return;
-                            }
-                            
-                            // Calculate totals
-                            const subtotal = servicesList.reduce((sum, service) => sum + (service.price * service.quantity), 0);
-                            const total = subtotal - discount;
-                            
-                            if (total < 0) {
-                                alert('Total cannot be negative.');
-                                return;
-                            }
-                            
-                            // Update sale object
-                            const customer = customers.find(c => c.id === customerId);
-                            const servicesText = servicesList.map(s => s.name).join(', ');
-                            
-                            // Handle commission changes
-                            const oldCommission = parseFloat((sale.commission || 'QR 0').replace('QR ', '')) || 0;
-                            let newCommission = null;
-                            
-                            if (referral) {
-                                const commissionAmount = total * (commissionRate / 100);
-                                newCommission = \`QR \${commissionAmount.toFixed(2)}\`;
-                                
-                                // Update referrer balance if commission changed
-                                if (oldCommission !== commissionAmount) {
-                                    const referrer = customers.find(c => c.affiliateCode === referral);
-                                    if (referrer) {
-                                        referrer.accountBalance = referrer.accountBalance - oldCommission + commissionAmount;
-                                    }
-                                }
-                            } else if (oldCommission > 0) {
-                                // Remove old commission
-                                const oldReferrer = customers.find(c => c.affiliateCode === sale.referral);
-                                if (oldReferrer) {
-                                    oldReferrer.accountBalance -= oldCommission;
-                                }
-                            }
-                            
-                            // Update the sale
-                            Object.assign(sale, {
-                                date,
-                                customer: customer.name,
-                                customerId,
-                                services: servicesText,
-                                servicesList,
-                                amount: \`QR \${total.toFixed(2)}\`,
-                                referral: referral || null,
-                                commission: newCommission,
-                                discount
-                            });
-                            
-                            // Call parent window's saveData function
-                            if (window.opener && window.opener.saveData) {
-                                window.opener.saveData();
-                                // Refresh parent window tables
-                                if (window.opener.renderSalesTable) window.opener.renderSalesTable();
-                                if (window.opener.renderCustomerTable) window.opener.renderCustomerTable();
-                                if (window.opener.renderReferralsTable) window.opener.renderReferralsTable();
-                                if (window.opener.showAlert) window.opener.showAlert('Sale updated successfully.');
-                            }
-                            
-                            window.close();
-                        });
-                    `;
-                    doc.body.appendChild(script);
-                } catch (err) {
-                    console.error('Error opening edit window:', err);
-                    showAlert('Error opening edit window. Check console for details.');
+                if (!sale) {
+                    showAlert('Sale not found');
+                    return;
                 }
+
+                // Populate edit sale modal
+                document.getElementById('edit-sale-id').value = saleId;
+                document.getElementById('edit-customer-name').value = sale.customer;
+                document.getElementById('edit-customer-phone').value = customers.find(c => c.id === sale.customerId)?.phone || '';
+                document.getElementById('edit-product-name').value = sale.servicesList?.[0]?.name || '';
+                document.getElementById('edit-sale-amount').value = parseFloat(sale.amount.replace('QR ', ''));
+                document.getElementById('edit-affiliate-code').value = sale.referral || '';
+                document.getElementById('edit-sale-date').value = sale.date;
+                document.getElementById('edit-notes').value = '';
+
+                // Populate services
+                const servicesContainer = document.getElementById('edit-sale-services-container');
+                servicesContainer.innerHTML = '';
+
+                if (sale.servicesList && sale.servicesList.length > 0) {
+                    sale.servicesList.forEach(service => {
+                        const serviceRow = document.createElement('div');
+                        serviceRow.className = 'grid grid-cols-1 md:grid-cols-12 gap-4 service-row';
+                        serviceRow.innerHTML = `
+                            <div class="md:col-span-5">
+                                <input type="text" name="service-name" value="${service.name}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" placeholder="Service description">
+                            </div>
+                            <div class="md:col-span-3">
+                                <input type="number" name="service-price" value="${service.price}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" placeholder="Price">
+                            </div>
+                            <div class="md:col-span-3">
+                                <input type="number" name="service-quantity" value="${service.quantity}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" placeholder="Qty" value="1">
+                            </div>
+                            <div class="md:col-span-1 flex items-center justify-center">
+                                <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                        servicesContainer.appendChild(serviceRow);
+
+                        // Add event listeners
+                        serviceRow.querySelectorAll('input').forEach(input => input.addEventListener('input', calculateEditTotal));
+                        serviceRow.querySelector('.remove-service-btn').addEventListener('click', function() {
+                            serviceRow.remove();
+                            calculateEditTotal();
+                        });
+                    });
+                }
+
+                // Set discount
+                document.getElementById('edit-sale-discount').value = sale.discount || 0;
+
+                // Calculate total
+                calculateEditTotal();
+
+                // Show modal
+                showModal('edit-sale-modal');
             });
         });
         document.querySelectorAll('.delete-sale-btn').forEach(btn => {
@@ -1680,6 +1346,151 @@ document.addEventListener('DOMContentLoaded', function() {
     // Close New Sale Modal
     document.getElementById('close-new-sale-modal').addEventListener('click', () => hideModal('new-sale-modal'));
     document.getElementById('cancel-new-sale').addEventListener('click', () => hideModal('new-sale-modal'));
+
+    // Edit Sale Modal Logic
+    function initEditSaleModal() {
+        const modalId = 'edit-sale-modal';
+        const form = document.getElementById('edit-sale-form');
+        const servicesContainer = document.getElementById('edit-sale-services-container');
+        const addServiceBtn = document.getElementById('edit-add-service-btn');
+        const discountInput = document.getElementById('edit-sale-discount');
+        const totalSpan = document.getElementById('edit-sale-total');
+
+        // Calculate total function
+        function calculateEditTotal() {
+            let subtotal = 0;
+            servicesContainer.querySelectorAll('.service-row').forEach(div => {
+                const price = parseFloat(div.querySelector('[name="service-price"]').value) || 0;
+                const qty = parseInt(div.querySelector('[name="service-quantity"]').value) || 1;
+                subtotal += price * qty;
+            });
+            const discount = parseFloat(discountInput.value) || 0;
+            totalSpan.textContent = (subtotal - discount).toFixed(2);
+        }
+
+        // Add service button
+        addServiceBtn.addEventListener('click', function() {
+            const newDiv = document.createElement('div');
+            newDiv.className = 'grid grid-cols-1 md:grid-cols-12 gap-4 service-row';
+            newDiv.innerHTML = `
+                <div class="md:col-span-5">
+                    <input type="text" name="service-name" placeholder="Service description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
+                </div>
+                <div class="md:col-span-3">
+                    <input type="number" name="service-price" placeholder="Price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
+                </div>
+                <div class="md:col-span-3">
+                    <input type="number" name="service-quantity" placeholder="Qty" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="1">
+                </div>
+                <div class="md:col-span-1 flex items-center justify-center">
+                    <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            servicesContainer.appendChild(newDiv);
+            newDiv.querySelectorAll('input').forEach(input => input.addEventListener('input', calculateEditTotal));
+            newDiv.querySelector('.remove-service-btn').addEventListener('click', function() {
+                newDiv.remove();
+                calculateEditTotal();
+            });
+        });
+
+        // Discount input listener
+        discountInput.addEventListener('input', calculateEditTotal);
+
+        // Form submit
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const saleId = parseInt(document.getElementById('edit-sale-id').value);
+            const sale = sales.find(s => s.id === saleId);
+
+            if (!sale) {
+                showAlert('Sale not found');
+                return;
+            }
+
+            // Get form data
+            const customerName = document.getElementById('edit-customer-name').value.trim();
+            const customerPhone = document.getElementById('edit-customer-phone').value.trim();
+            const productName = document.getElementById('edit-product-name').value.trim();
+            const saleAmount = parseFloat(document.getElementById('edit-sale-amount').value) || 0;
+            const affiliateCode = document.getElementById('edit-affiliate-code').value.trim();
+            const saleDate = document.getElementById('edit-sale-date').value;
+            const notes = document.getElementById('edit-notes').value.trim();
+
+            // Validation
+            if (!customerName || !saleDate || saleAmount <= 0) {
+                showAlert('Please fill in all required fields.');
+                return;
+            }
+
+            // Update customer phone if changed
+            const customer = customers.find(c => c.id === sale.customerId);
+            if (customer && customerPhone !== customer.phone) {
+                customer.phone = customerPhone;
+            }
+
+            // Handle commission changes
+            const oldCommission = parseFloat((sale.commission || 'QR 0').replace('QR ', '')) || 0;
+            let newCommission = null;
+
+            if (affiliateCode) {
+                const commissionAmount = saleAmount * (commissionRate / 100);
+                newCommission = `QR ${commissionAmount.toFixed(2)}`;
+
+                // Update referrer balance if commission changed
+                if (oldCommission !== commissionAmount) {
+                    const referrer = customers.find(c => c.affiliateCode === affiliateCode);
+                    if (referrer) {
+                        referrer.accountBalance = referrer.accountBalance - oldCommission + commissionAmount;
+                    }
+                }
+            } else if (oldCommission > 0) {
+                // Remove old commission
+                const oldReferrer = customers.find(c => c.affiliateCode === sale.referral);
+                if (oldReferrer) {
+                    oldReferrer.accountBalance -= oldCommission;
+                }
+            }
+
+            // Update the sale
+            Object.assign(sale, {
+                date: saleDate,
+                customer: customerName,
+                amount: `QR ${saleAmount.toFixed(2)}`,
+                referral: affiliateCode || null,
+                commission: newCommission,
+                services: productName,
+                servicesList: [{ name: productName, price: saleAmount, quantity: 1 }]
+            });
+
+            // Save data
+            saveData();
+
+            // Refresh tables
+            renderSalesTable();
+            renderCustomerTable();
+            renderReferralsTable();
+            renderCodesTable();
+            updateCodesCount();
+
+            hideModal(modalId);
+            showAlert('Sale updated successfully.');
+        });
+    }
+
+    // Trigger Edit Sale Modal
+    // (Already handled in the edit button click listener above)
+
+    // Close Edit Sale Modal
+    document.getElementById('close-edit-sale-modal').addEventListener('click', () => hideModal('edit-sale-modal'));
+    document.getElementById('cancel-edit-sale').addEventListener('click', () => hideModal('edit-sale-modal'));
+
+    // Initialize both modals
+    initNewSaleModal();
+    initEditSaleModal();
     // Render Referrals Table with Status Dropdown
     const referralsTableBody = document.getElementById('referrals-table-body');
     referralsTableBody.addEventListener('change', function(event) {

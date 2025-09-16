@@ -357,6 +357,85 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Edit Sale Modal -->
+                <div id="edit-sale-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                    <div class="modal-content bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                                    <i class="fas fa-edit mr-3 text-blue-600"></i> Edit Sale
+                                </h2>
+                                <button id="close-edit-sale-modal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
+                            <form id="edit-sale-form" class="space-y-6">
+                                <input type="hidden" id="edit-sale-id" name="saleId">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="edit-customer-name" class="block text-sm font-medium text-gray-700 mb-2">Customer Name *</label>
+                                        <input type="text" id="edit-customer-name" name="customerName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter customer name">
+                                    </div>
+                                    <div>
+                                        <label for="edit-customer-phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                                        <input type="tel" id="edit-customer-phone" name="customerPhone" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter phone number">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="edit-product-name" class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                                        <input type="text" id="edit-product-name" name="productName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter product name">
+                                    </div>
+                                    <div>
+                                        <label for="edit-sale-amount" class="block text-sm font-medium text-gray-700 mb-2">Sale Amount (QR) *</label>
+                                        <input type="number" id="edit-sale-amount" name="saleAmount" step="0.01" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="edit-affiliate-code" class="block text-sm font-medium text-gray-700 mb-2">Affiliate Code</label>
+                                        <input type="text" id="edit-affiliate-code" name="affiliateCode" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter affiliate code (optional)">
+                                    </div>
+                                    <div>
+                                        <label for="edit-sale-date" class="block text-sm font-medium text-gray-700 mb-2">Sale Date *</label>
+                                        <input type="date" id="edit-sale-date" name="saleDate" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="edit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                                    <textarea id="edit-notes" name="notes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Additional notes (optional)"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Services</label>
+                                    <div id="edit-sale-services-container" class="space-y-4">
+                                        <!-- Services will be populated here -->
+                                    </div>
+                                    <button type="button" id="edit-add-service-btn" class="mt-2 text-blue-600 text-sm hover:text-blue-800 flex items-center">
+                                        <i class="fas fa-plus mr-1"></i> Add Another Service
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="edit-sale-discount" class="block text-sm font-medium text-gray-700 mb-2">Discount (QR)</label>
+                                        <input type="number" id="edit-sale-discount" name="discount" step="0.01" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00">
+                                    </div>
+                                    <div class="flex items-end">
+                                        <div class="w-full">
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Total</label>
+                                            <div class="text-lg font-semibold text-green-600">QR <span id="edit-sale-total">0.00</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-3">
+                                    <button type="button" id="cancel-edit-sale" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                                    <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-save mr-2"></i> Update Sale</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Referral Program Tab -->
                 <div id="referrals" class="tab-content">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-6">
