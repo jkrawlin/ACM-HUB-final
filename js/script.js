@@ -26,14 +26,88 @@ const db = firebase.firestore();  // Firestore database instance
 const auth = firebase.auth(); // Auth instance for login
 const analytics = firebase.analytics();  // Analytics if you want to use it (optional)
 
-// Move showAlert outside for global access
-function showAlert(message) {
-    const alertDiv = document.getElementById('custom-alert');
-    // Sanitize the message to prevent XSS
-    const sanitizedMessage = message.replace(/[<>]/g, '');
-    alertDiv.textContent = sanitizedMessage;
-    alertDiv.classList.add('show');
-    setTimeout(() => alertDiv.classList.remove('show'), 3000);
+// Move loadDataFromFirestore outside of DOMContentLoaded so it can be called from auth.onAuthStateChanged
+function loadDataFromFirestore() {
+    // Load customers
+    db.collection('customers').get().then(snapshot => {
+        customers = [];
+        if (snapshot.empty) {
+            customers = sampleCustomers; // Fallback to sample
+            saveDataToFirestore(); // Seed sample data to Firestore
+        } else {
+            snapshot.forEach(doc => customers.push(doc.data()));
+        }
+        renderCustomerTable();
+    }).catch(error => {
+        showAlert('Error loading customers: ' + error.message);
+        customers = sampleCustomers; // Fallback on error
+        renderCustomerTable();
+    });
+
+    // Load sales
+    db.collection('sales').get().then(snapshot => {
+        sales = [];
+        if (snapshot.empty) {
+            sales = sampleSales;
+            saveDataToFirestore();
+        } else {
+            snapshot.forEach(doc => sales.push(doc.data()));
+        }
+        renderSalesTable();
+    }).catch(error => {
+        showAlert('Error loading sales: ' + error.message);
+        sales = sampleSales;
+        renderSalesTable();
+    });
+
+    // Load referrals
+    db.collection('referrals').get().then(snapshot => {
+        referrals = [];
+        if (snapshot.empty) {
+            referrals = sampleReferrals;
+            saveDataToFirestore();
+        } else {
+            snapshot.forEach(doc => referrals.push(doc.data()));
+        }
+        renderReferralsTable();
+    }).catch(error => {
+        showAlert('Error loading referrals: ' + error.message);
+        referrals = sampleReferrals;
+        renderReferralsTable();
+    });
+
+    // Load affiliateCodes
+    db.collection('affiliateCodes').get().then(snapshot => {
+        affiliateCodes = [];
+        if (snapshot.empty) {
+            affiliateCodes = []; // No sample for affiliateCodes, start empty
+            saveDataToFirestore();
+        } else {
+            snapshot.forEach(doc => affiliateCodes.push(doc.data()));
+        }
+        renderCodesTable();
+        updateCodesCount();
+    }).catch(error => {
+        showAlert('Error loading affiliate codes: ' + error.message);
+        affiliateCodes = [];
+        renderCodesTable();
+        updateCodesCount();
+    });
+
+    // Load commission rate
+    db.collection('settings').doc('commission').get().then(doc => {
+        if (doc.exists) {
+            commissionRate = doc.data().rate || 3;
+        } else {
+            commissionRate = 3;
+            saveDataToFirestore();
+        }
+        document.getElementById('commission-rate').value = commissionRate;
+    }).catch(error => {
+        showAlert('Error loading commission rate: ' + error.message);
+        commissionRate = 3;
+        document.getElementById('commission-rate').value = commissionRate;
+    });
 }
 
 // Input sanitization helper
@@ -214,88 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to load all data from Firestore (with fallback to sample if empty)
-    function loadDataFromFirestore() {
-        // Load customers
-        db.collection('customers').get().then(snapshot => {
-            customers = [];
-            if (snapshot.empty) {
-                customers = sampleCustomers; // Fallback to sample
-                saveDataToFirestore(); // Seed sample data to Firestore
-            } else {
-                snapshot.forEach(doc => customers.push(doc.data()));
-            }
-            renderCustomerTable();
-        }).catch(error => {
-            showAlert('Error loading customers: ' + error.message);
-            customers = sampleCustomers; // Fallback on error
-            renderCustomerTable();
-        });
-
-        // Load sales
-        db.collection('sales').get().then(snapshot => {
-            sales = [];
-            if (snapshot.empty) {
-                sales = sampleSales;
-                saveDataToFirestore();
-            } else {
-                snapshot.forEach(doc => sales.push(doc.data()));
-            }
-            renderSalesTable();
-        }).catch(error => {
-            showAlert('Error loading sales: ' + error.message);
-            sales = sampleSales;
-            renderSalesTable();
-        });
-
-        // Load referrals
-        db.collection('referrals').get().then(snapshot => {
-            referrals = [];
-            if (snapshot.empty) {
-                referrals = sampleReferrals;
-                saveDataToFirestore();
-            } else {
-                snapshot.forEach(doc => referrals.push(doc.data()));
-            }
-            renderReferralsTable();
-        }).catch(error => {
-            showAlert('Error loading referrals: ' + error.message);
-            referrals = sampleReferrals;
-            renderReferralsTable();
-        });
-
-        // Load affiliateCodes
-        db.collection('affiliateCodes').get().then(snapshot => {
-            affiliateCodes = [];
-            if (snapshot.empty) {
-                affiliateCodes = []; // No sample for affiliateCodes, start empty
-                saveDataToFirestore();
-            } else {
-                snapshot.forEach(doc => affiliateCodes.push(doc.data()));
-            }
-            renderCodesTable();
-            updateCodesCount();
-        }).catch(error => {
-            showAlert('Error loading affiliate codes: ' + error.message);
-            affiliateCodes = [];
-            renderCodesTable();
-            updateCodesCount();
-        });
-
-        // Load commission rate
-        db.collection('settings').doc('commission').get().then(doc => {
-            if (doc.exists) {
-                commissionRate = doc.data().rate || 3;
-            } else {
-                commissionRate = 3;
-                saveDataToFirestore();
-            }
-            document.getElementById('commission-rate').value = commissionRate;
-        }).catch(error => {
-            showAlert('Error loading commission rate: ' + error.message);
-            commissionRate = 3;
-            document.getElementById('commission-rate').value = commissionRate;
-        });
-    }
+    // loadDataFromFirestore is now defined globally above
 
     // Replace saveData with Firestore save
     function saveData() {
@@ -1347,7 +1340,29 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('close-new-sale-modal').addEventListener('click', () => hideModal('new-sale-modal'));
     document.getElementById('cancel-new-sale').addEventListener('click', () => hideModal('new-sale-modal'));
 
-    // Edit Sale Modal Logic
+    // Close Edit Sale Modal
+    document.getElementById('close-edit-sale-modal').addEventListener('click', () => hideModal('edit-sale-modal'));
+    document.getElementById('cancel-edit-sale').addEventListener('click', () => hideModal('edit-sale-modal'));
+
+    // Calculate total function (moved outside initEditSaleModal for global access)
+    function calculateEditTotal() {
+        const servicesContainer = document.getElementById('edit-sale-services-container');
+        const discountInput = document.getElementById('edit-sale-discount');
+        const totalSpan = document.getElementById('edit-sale-total');
+
+        if (!servicesContainer || !discountInput || !totalSpan) return;
+
+        let subtotal = 0;
+        servicesContainer.querySelectorAll('.service-row').forEach(div => {
+            const price = parseFloat(div.querySelector('[name="service-price"]').value) || 0;
+            const qty = parseInt(div.querySelector('[name="service-quantity"]').value) || 1;
+            subtotal += price * qty;
+        });
+        const discount = parseFloat(discountInput.value) || 0;
+        totalSpan.textContent = (subtotal - discount).toFixed(2);
+    }
+
+    // Initialize Edit Sale Modal
     function initEditSaleModal() {
         const modalId = 'edit-sale-modal';
         const form = document.getElementById('edit-sale-form');
@@ -1356,34 +1371,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const discountInput = document.getElementById('edit-sale-discount');
         const totalSpan = document.getElementById('edit-sale-total');
 
-        // Calculate total function
-        function calculateEditTotal() {
-            let subtotal = 0;
-            servicesContainer.querySelectorAll('.service-row').forEach(div => {
-                const price = parseFloat(div.querySelector('[name="service-price"]').value) || 0;
-                const qty = parseInt(div.querySelector('[name="service-quantity"]').value) || 1;
-                subtotal += price * qty;
-            });
-            const discount = parseFloat(discountInput.value) || 0;
-            totalSpan.textContent = (subtotal - discount).toFixed(2);
-        }
-
-        // Add service button
+        // Add service button functionality
         addServiceBtn.addEventListener('click', function() {
             const newDiv = document.createElement('div');
             newDiv.className = 'grid grid-cols-1 md:grid-cols-12 gap-4 service-row';
             newDiv.innerHTML = `
                 <div class="md:col-span-5">
-                    <input type="text" name="service-name" placeholder="Service description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
+                    <input type="text" name="service-name" placeholder="Service description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Description">
                 </div>
                 <div class="md:col-span-3">
-                    <input type="number" name="service-price" placeholder="Price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
+                    <input type="number" name="service-price" placeholder="Price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Price">
                 </div>
                 <div class="md:col-span-3">
-                    <input type="number" name="service-quantity" placeholder="Qty" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="1">
+                    <input type="number" name="service-quantity" placeholder="Qty" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="1" aria-label="Service Quantity">
                 </div>
                 <div class="md:col-span-1 flex items-center justify-center">
-                    <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors">
+                    <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors" aria-label="Remove Service">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1399,96 +1402,167 @@ document.addEventListener('DOMContentLoaded', function() {
         // Discount input listener
         discountInput.addEventListener('input', calculateEditTotal);
 
-        // Form submit
-        form.addEventListener('submit', async function(e) {
+        // Form submit handler
+        form.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const saleId = parseInt(document.getElementById('edit-sale-id').value);
-            const sale = sales.find(s => s.id === saleId);
-
-            if (!sale) {
-                showAlert('Sale not found');
-                return;
-            }
-
-            // Get form data
             const customerName = document.getElementById('edit-customer-name').value.trim();
             const customerPhone = document.getElementById('edit-customer-phone').value.trim();
             const productName = document.getElementById('edit-product-name').value.trim();
-            const saleAmount = parseFloat(document.getElementById('edit-sale-amount').value) || 0;
+            const saleAmount = parseFloat(document.getElementById('edit-sale-amount').value);
             const affiliateCode = document.getElementById('edit-affiliate-code').value.trim();
             const saleDate = document.getElementById('edit-sale-date').value;
+            const discount = parseFloat(document.getElementById('edit-sale-discount').value) || 0;
             const notes = document.getElementById('edit-notes').value.trim();
 
-            // Validation
-            if (!customerName || !saleDate || saleAmount <= 0) {
-                showAlert('Please fill in all required fields.');
+            if (!customerName || !customerPhone || !productName || isNaN(saleAmount) || saleAmount <= 0 || !saleDate) {
+                showAlert('Please fill in all required fields with valid values.');
                 return;
             }
 
-            // Update customer phone if changed
-            const customer = customers.find(c => c.id === sale.customerId);
-            if (customer && customerPhone !== customer.phone) {
-                customer.phone = customerPhone;
+            // Find the sale to update
+            const saleIndex = sales.findIndex(s => s.id === saleId);
+            if (saleIndex === -1) {
+                showAlert('Sale not found.');
+                return;
             }
 
-            // Handle commission changes
-            const oldCommission = parseFloat((sale.commission || 'QR 0').replace('QR ', '')) || 0;
-            let newCommission = null;
+            const oldSale = sales[saleIndex];
+            const oldAmount = parseFloat(oldSale.amount.replace('QR ', ''));
+            const oldDiscount = oldSale.discount || 0;
 
+            // Collect services
+            const serviceRows = servicesContainer.querySelectorAll('.service-row');
+            const servicesList = [];
+            serviceRows.forEach(row => {
+                const name = row.querySelector('[name="service-name"]').value.trim();
+                const price = parseFloat(row.querySelector('[name="service-price"]').value) || 0;
+                const quantity = parseInt(row.querySelector('[name="service-quantity"]').value) || 1;
+                if (name && price > 0 && quantity > 0) {
+                    servicesList.push({ name, price, quantity });
+                }
+            });
+
+            if (servicesList.length === 0) {
+                showAlert('Please add at least one valid service.');
+                return;
+            }
+
+            const servicesText = servicesList.map(s => s.name).join(', ');
+            const total = servicesList.reduce((sum, service) => sum + (service.price * service.quantity), 0) - discount;
+
+            if (total < 0) {
+                showAlert('Total cannot be negative.');
+                return;
+            }
+
+            // Handle commission adjustments if referral changed
+            let commission = null;
             if (affiliateCode) {
-                const commissionAmount = saleAmount * (commissionRate / 100);
-                newCommission = `QR ${commissionAmount.toFixed(2)}`;
+                const commissionAmount = total * (commissionRate / 100);
+                commission = `QR ${commissionAmount.toFixed(2)}`;
 
-                // Update referrer balance if commission changed
-                if (oldCommission !== commissionAmount) {
+                // If referral changed, adjust commissions
+                if (oldSale.referral !== affiliateCode) {
+                    // Reverse old commission if it existed
+                    if (oldSale.referral && oldSale.commission) {
+                        const oldCommissionAmount = parseFloat(oldSale.commission.replace('QR ', ''));
+                        const referrer = customers.find(c => c.affiliateCode === oldSale.referral);
+                        if (referrer) {
+                            referrer.accountBalance -= oldCommissionAmount;
+                            const refIndex = referrals.findIndex(r => r.code === oldSale.referral);
+                            if (refIndex !== -1) {
+                                referrals[refIndex].totalSales = `QR ${(parseFloat(referrals[refIndex].totalSales.replace('QR ', '')) - oldAmount + oldDiscount).toFixed(2)}`;
+                                referrals[refIndex].commissionEarned = `QR ${(parseFloat(referrals[refIndex].commissionEarned.replace('QR ', '')) - oldCommissionAmount).toFixed(2)}`;
+                            }
+                        }
+                    }
+
+                    // Add new commission
+                    const newReferrer = customers.find(c => c.affiliateCode === affiliateCode);
+                    if (newReferrer) {
+                        newReferrer.accountBalance += commissionAmount;
+                        const refIndex = referrals.findIndex(r => r.code === affiliateCode);
+                        if (refIndex !== -1) {
+                            referrals[refIndex].totalSales = `QR ${(parseFloat(referrals[refIndex].totalSales.replace('QR ', '')) + total).toFixed(2)}`;
+                            referrals[refIndex].commissionEarned = `QR ${(parseFloat(referrals[refIndex].commissionEarned.replace('QR ', '')) + commissionAmount).toFixed(2)}`;
+                        }
+                    }
+                } else if (oldAmount !== total) {
+                    // Same referral, but amount changed - adjust commission
+                    const oldCommissionAmount = oldSale.commission ? parseFloat(oldSale.commission.replace('QR ', '')) : 0;
+                    const commissionDiff = commissionAmount - oldCommissionAmount;
+
                     const referrer = customers.find(c => c.affiliateCode === affiliateCode);
                     if (referrer) {
-                        referrer.accountBalance = referrer.accountBalance - oldCommission + commissionAmount;
+                        referrer.accountBalance += commissionDiff;
+                        const refIndex = referrals.findIndex(r => r.code === affiliateCode);
+                        if (refIndex !== -1) {
+                            const currentSales = parseFloat(referrals[refIndex].totalSales.replace('QR ', ''));
+                            const currentCommission = parseFloat(referrals[refIndex].commissionEarned.replace('QR ', ''));
+                            referrals[refIndex].totalSales = `QR ${(currentSales - oldAmount + oldDiscount + total - discount).toFixed(2)}`;
+                            referrals[refIndex].commissionEarned = `QR ${(currentCommission - oldCommissionAmount + commissionAmount).toFixed(2)}`;
+                        }
                     }
                 }
-            } else if (oldCommission > 0) {
-                // Remove old commission
-                const oldReferrer = customers.find(c => c.affiliateCode === sale.referral);
-                if (oldReferrer) {
-                    oldReferrer.accountBalance -= oldCommission;
+            } else if (oldSale.referral && oldSale.commission) {
+                // Referral removed - reverse commission
+                const oldCommissionAmount = parseFloat(oldSale.commission.replace('QR ', ''));
+                const referrer = customers.find(c => c.affiliateCode === oldSale.referral);
+                if (referrer) {
+                    referrer.accountBalance -= oldCommissionAmount;
+                    const refIndex = referrals.findIndex(r => r.code === oldSale.referral);
+                    if (refIndex !== -1) {
+                        referrals[refIndex].totalSales = `QR ${(parseFloat(referrals[refIndex].totalSales.replace('QR ', '')) - oldAmount + oldDiscount).toFixed(2)}`;
+                        referrals[refIndex].commissionEarned = `QR ${(parseFloat(referrals[refIndex].commissionEarned.replace('QR ', '')) - oldCommissionAmount).toFixed(2)}`;
+                    }
                 }
             }
 
             // Update the sale
-            Object.assign(sale, {
-                date: saleDate,
+            sales[saleIndex] = {
+                ...oldSale,
                 customer: customerName,
-                amount: `QR ${saleAmount.toFixed(2)}`,
+                services: servicesText,
+                servicesList,
+                amount: `QR ${total.toFixed(2)}`,
                 referral: affiliateCode || null,
-                commission: newCommission,
-                services: productName,
-                servicesList: [{ name: productName, price: saleAmount, quantity: 1 }]
-            });
+                commission,
+                discount,
+                date: saleDate
+            };
+
+            // Update customer info if changed
+            if (oldSale.customerId) {
+                const customer = customers.find(c => c.id === oldSale.customerId);
+                if (customer) {
+                    customer.name = customerName;
+                    // Update phone if it changed
+                    const phoneCustomer = customers.find(c => c.phone === customerPhone);
+                    if (phoneCustomer && phoneCustomer.id !== oldSale.customerId) {
+                        showAlert('Phone number already exists for another customer.');
+                        return;
+                    }
+                    customer.phone = customerPhone;
+                }
+            }
 
             // Save data
             saveData();
 
-            // Refresh tables
+            // Close modal and refresh
+            hideModal(modalId);
             renderSalesTable();
             renderCustomerTable();
             renderReferralsTable();
             renderCodesTable();
             updateCodesCount();
-
-            hideModal(modalId);
             showAlert('Sale updated successfully.');
         });
     }
 
-    // Trigger Edit Sale Modal
-    // (Already handled in the edit button click listener above)
-
-    // Close Edit Sale Modal
-    document.getElementById('close-edit-sale-modal').addEventListener('click', () => hideModal('edit-sale-modal'));
-    document.getElementById('cancel-edit-sale').addEventListener('click', () => hideModal('edit-sale-modal'));
-
-    // Initialize both modals
+    // Initialize both modals early
     initNewSaleModal();
     initEditSaleModal();
     // Render Referrals Table with Status Dropdown
