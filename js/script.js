@@ -1288,12 +1288,105 @@ function populateEditCustomerModal(customer) {
 }
 
 function deleteCustomer(customerId) {
-    const index = customers.findIndex(c => c.id === customerId);
-    if (index !== -1) {
-        customers.splice(index, 1);
+    const customerIndex = customers.findIndex(c => c.id === customerId);
+    if (customerIndex === -1) {
+        showAlert('Customer not found!', 'error');
+        return;
+    }
+    
+    const customerToDelete = customers[customerIndex];
+    const customerName = customerToDelete.name;
+    
+    // Show detailed confirmation with impact information
+    const salesCount = sales.filter(s => s.customerId === customerId).length;
+    const referredCount = customerToDelete.referredCustomers ? customerToDelete.referredCustomers.length : 0;
+    const referrerName = customerToDelete.referredBy ? 
+        customers.find(c => c.affiliateCode === customerToDelete.referredBy)?.name || 'Unknown' : null;
+    
+    let confirmMessage = `Are you sure you want to permanently delete customer "${customerName}"?\n\n`;
+    confirmMessage += `This will:\n`;
+    confirmMessage += `• Remove ${salesCount} sales records\n`;
+    if (referredCount > 0) {
+        confirmMessage += `• Remove referral links to ${referredCount} customers they referred\n`;
+    }
+    if (referrerName) {
+        confirmMessage += `• Remove them from ${referrerName}'s referred customers list\n`;
+    }
+    confirmMessage += `• Free up their affiliate code "${customerToDelete.affiliateCode}"\n`;
+    confirmMessage += `\nThis action cannot be undone!`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    try {
+        // 1. Remove customer from customers array
+        customers.splice(customerIndex, 1);
+        
+        // 2. Remove all sales records for this customer
+        const salesToRemove = sales.filter(s => s.customerId === customerId);
+        for (let i = sales.length - 1; i >= 0; i--) {
+            if (sales[i].customerId === customerId) {
+                sales.splice(i, 1);
+            }
+        }
+        
+        // 3. Remove customer from other customers' referredCustomers lists
+        customers.forEach(customer => {
+            if (customer.referredCustomers && customer.referredCustomers.includes(customerId)) {
+                const index = customer.referredCustomers.indexOf(customerId);
+                customer.referredCustomers.splice(index, 1);
+            }
+        });
+        
+        // 4. Update customers who were referred by this customer (remove their referredBy)
+        customers.forEach(customer => {
+            if (customer.referredBy === customerToDelete.affiliateCode) {
+                customer.referredBy = null;
+            }
+        });
+        
+        // 5. Mark the affiliate code as available again
+        const affiliateCodeIndex = affiliateCodes.findIndex(code => code.code === customerToDelete.affiliateCode);
+        if (affiliateCodeIndex !== -1) {
+            affiliateCodes[affiliateCodeIndex].status = 'available';
+            // Clear usage history for this code
+            affiliateCodes[affiliateCodeIndex].usedInSales = [];
+        }
+        
+        // 6. Remove from referrals tracking table
+        const referralIndex = referrals.findIndex(r => r.code === customerToDelete.affiliateCode);
+        if (referralIndex !== -1) {
+            referrals.splice(referralIndex, 1);
+        }
+        
+        // 7. Update referral statistics for other customers who referred this customer
+        if (customerToDelete.referredBy) {
+            const referrerReferral = referrals.find(r => r.code === customerToDelete.referredBy);
+            if (referrerReferral) {
+                // Remove this customer from referred customers list
+                const refIndex = referrerReferral.referredCustomers.indexOf(customerId);
+                if (refIndex !== -1) {
+                    referrerReferral.referredCustomers.splice(refIndex, 1);
+                    referrerReferral.totalReferrals = referrerReferral.referredCustomers.length;
+                }
+            }
+        }
+        
+        // Save all changes and update UI
         saveDataToFirestore();
         renderCustomerTable();
-        showAlert('Customer deleted successfully!');
+        renderSalesTable();
+        renderCodesTable();
+        renderReferralsTable();
+        
+        const deletionSummary = `Customer "${customerName}" deleted successfully!\n`;
+        const details = `Removed: ${salesToRemove.length} sales, updated ${referredCount} referral relationships`;
+        showAlert(deletionSummary + details, 'success');
+        
+    } catch (error) {
+        console.error('Error deleting customer:', error);
+        showAlert('Error occurred while deleting customer. Please try again.', 'error');
     }
 }
 
