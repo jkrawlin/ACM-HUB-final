@@ -254,188 +254,233 @@
                     <!-- New Sale Modal -->
                     <div id="new-sale-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
                         <div class="modal-content bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                            <div class="p-6">
-                                <div class="flex justify-between items-center mb-6">
-                                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                                        <i class="fas fa-plus-circle mr-3 text-green-600"></i> New Sale
-                                    </h2>
-                                    <button id="close-new-sale-modal" class="text-gray-400 hover:text-gray-600 transition-colors">
-                                        <i class="fas fa-times text-xl"></i>
-                                    </button>
-                                </div>
-                            <form id="new-sale-form" class="space-y-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
-                                    <div class="flex space-x-6">
-                                        <label class="flex items-center text-gray-700">
-                                            <input type="radio" name="customer-type" value="existing" checked class="mr-2 focus:ring-blue-500" aria-label="Existing Customer">
-                                            Existing Customer
+                            <div class="modal-header">
+                                <h2 class="modal-title">
+                                    <i class="fas fa-plus-circle text-green-600"></i> New Sale
+                                </h2>
+                                <button id="close-new-sale-modal" class="modal-close" aria-label="Close modal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="new-sale-form" class="space-y-6">
+                                    <div>
+                                        <label class="form-label">
+                                            <i class="fas fa-user-check text-blue-500"></i> Customer Type
                                         </label>
-                                        <label class="flex items-center text-gray-700">
-                                            <input type="radio" name="customer-type" value="new" class="mr-2 focus:ring-blue-500" aria-label="New Customer">
-                                            New Customer
+                                        <div class="flex space-x-6">
+                                            <label class="flex items-center text-gray-700">
+                                                <input type="radio" name="customer-type" value="existing" checked class="mr-2 focus:ring-blue-500" aria-label="Existing Customer">
+                                                Existing Customer
+                                            </label>
+                                            <label class="flex items-center text-gray-700">
+                                                <input type="radio" name="customer-type" value="new" class="mr-2 focus:ring-blue-500" aria-label="New Customer">
+                                                New Customer
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="sale-customer-code" class="form-label">
+                                            <i class="fas fa-hashtag text-blue-500"></i> Customer Affiliate Code (from card)
                                         </label>
+                                        <input type="text" id="sale-customer-code" class="form-input" aria-label="Customer Affiliate Code">
                                     </div>
-                                </div>
-                                <div>
-                                    <label for="sale-customer-code" class="block text-sm font-medium text-gray-700 mb-1">Customer Affiliate Code (from card)</label>
-                                    <input type="text" id="sale-customer-code" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Customer Affiliate Code">
-                                </div>
-                                <div id="existing-customer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div id="existing-customer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="sale-customer-name" class="form-label">
+                                                <i class="fas fa-user text-blue-500"></i> Customer Name
+                                            </label>
+                                            <input type="text" id="sale-customer-name" class="form-input" readonly placeholder="Customer name will appear here..." aria-label="Customer Name">
+                                            <input type="hidden" id="sale-customer" required>
+                                        </div>
+                                    </div>
+                                    <div id="new-customer" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+                                        <div>
+                                            <label for="new-customer-name" class="form-label">
+                                                <i class="fas fa-user-plus text-blue-500"></i> Full Name *
+                                            </label>
+                                            <input type="text" id="new-customer-name" class="form-input" required aria-label="Full Name">
+                                        </div>
+                                        <div>
+                                            <label for="new-customer-email" class="form-label">
+                                                <i class="fas fa-envelope text-blue-500"></i> Email
+                                            </label>
+                                            <input type="email" id="new-customer-email" class="form-input" aria-label="Email">
+                                        </div>
+                                        <div>
+                                            <label for="new-customer-phone" class="form-label">
+                                                <i class="fas fa-phone text-blue-500"></i> Phone Number *
+                                            </label>
+                                            <input type="tel" id="new-customer-phone" class="form-input" required aria-label="Phone Number">
+                                        </div>
+                                        <div>
+                                            <label for="new-customer-qid" class="form-label">
+                                                <i class="fas fa-id-card text-blue-500"></i> QID
+                                            </label>
+                                            <input type="text" id="new-customer-qid" class="form-input" aria-label="QID">
+                                        </div>
+                                        <div>
+                                            <label for="new-customer-vehicle-plate" class="form-label">
+                                                <i class="fas fa-car text-blue-500"></i> Vehicle Plate Number *
+                                            </label>
+                                            <input type="text" id="new-customer-vehicle-plate" class="form-input" required aria-label="Vehicle Plate Number">
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="sale-date" class="form-label">
+                                                <i class="fas fa-calendar text-blue-500"></i> Date *
+                                            </label>
+                                            <input type="date" id="sale-date" class="form-input" required aria-label="Date" value="${new Date().toISOString().split('T')[0]}">
+                                        </div>
+                                        <div>
+                                            <label for="sale-referral" class="form-label">
+                                                <i class="fas fa-link text-blue-500"></i> Referrer Code (auto-filled if referred)
+                                            </label>
+                                            <input type="text" id="sale-referral" class="form-input" aria-label="Referrer Code">
+                                        </div>
+                                    </div>
                                     <div>
-                                        <label for="sale-customer-name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                                        <input type="text" id="sale-customer-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" readonly placeholder="Customer name will appear here..." aria-label="Customer Name">
-                                        <input type="hidden" id="sale-customer" required>
-                                    </div>
-                                </div>
-                                <div id="new-customer" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
-                                    <div>
-                                        <label for="new-customer-name" class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                                        <input type="text" id="new-customer-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Full Name">
-                                    </div>
-                                    <div>
-                                        <label for="new-customer-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                        <input type="email" id="new-customer-email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Email">
-                                    </div>
-                                    <div>
-                                        <label for="new-customer-phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                                        <input type="tel" id="new-customer-phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Phone Number">
-                                    </div>
-                                    <div>
-                                        <label for="new-customer-qid" class="block text-sm font-medium text-gray-700 mb-1">QID</label>
-                                        <input type="text" id="new-customer-qid" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="QID">
-                                    </div>
-                                    <div>
-                                        <label for="new-customer-vehicle-plate" class="block text-sm font-medium text-gray-700 mb-1">Vehicle Plate Number *</label>
-                                        <input type="text" id="new-customer-vehicle-plate" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Vehicle Plate Number">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label for="sale-date" class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                                    <input type="date" id="sale-date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Date" value="${new Date().toISOString().split('T')[0]}">
-                                </div>
-                                <div>
-                                    <label for="sale-referral" class="block text-sm font-medium text-gray-700 mb-1">Referrer Code (auto-filled if referred)</label>
-                                    <input type="text" id="sale-referral" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Referrer Code">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Services</label>
-                                    <div id="sale-services-container" class="space-y-4">
-                                        <!-- Initial service row -->
-                                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 service-row" draggable="true">
-                                            <div class="md:col-span-5">
-                                                <input type="text" name="service-name" placeholder="Service description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Description">
+                                        <label class="form-label">
+                                            <i class="fas fa-tools text-blue-500"></i> Services
+                                        </label>
+                                        <div id="sale-services-container" class="space-y-4">
+                                            <!-- Initial service row -->
+                                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 service-row" draggable="true">
+                                                <div class="md:col-span-5">
+                                                    <input type="text" name="service-name" placeholder="Service description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Description">
+                                                </div>
+                                                <div class="md:col-span-3">
+                                                    <input type="number" name="service-price" placeholder="Price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Price">
+                                                </div>
+                                                <div class="md:col-span-3">
+                                                    <input type="number" name="service-quantity" placeholder="Qty" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="1" aria-label="Service Quantity">
+                                                </div>
+                                                <div class="md:col-span-1 flex items-center justify-center">
+                                                    <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors" aria-label="Remove Service">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div class="md:col-span-3">
-                                                <input type="number" name="service-price" placeholder="Price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Price">
-                                            </div>
-                                            <div class="md:col-span-3">
-                                                <input type="number" name="service-quantity" placeholder="Qty" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="1" aria-label="Service Quantity">
-                                            </div>
-                                            <div class="md:col-span-1 flex items-center justify-center">
-                                                <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors" aria-label="Remove Service">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                        </div>
+                                        <button type="button" id="add-service-btn" class="text-blue-600 text-sm hover:text-blue-800 flex items-center mt-2">
+                                            <i class="fas fa-plus mr-1"></i> Add Another Service
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="sale-discount" class="form-label">
+                                                <i class="fas fa-percent text-blue-500"></i> Discount
+                                            </label>
+                                            <input type="number" id="sale-discount" class="form-input" value="0" aria-label="Discount">
+                                        </div>
+                                        <div class="flex items-end">
+                                            <div class="total-display w-full">
+                                                <i class="fas fa-calculator mr-2"></i> Total: <span id="sale-total" class="text-green-600">0.00</span> QR
                                             </div>
                                         </div>
                                     </div>
-                                    <button type="button" id="add-service-btn" class="text-blue-600 text-sm hover:text-blue-800 flex items-center mt-2">
-                                        <i class="fas fa-plus mr-1"></i> Add Another Service
-                                    </button>
-                                </div>
-                                <div>
-                                    <label for="sale-discount" class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
-                                    <input type="number" id="sale-discount" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="0" aria-label="Discount">
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <div class="text-lg font-semibold text-gray-800 flex items-center">
-                                        <i class="fas fa-calculator mr-2 text-green-600"></i> Total: <span id="sale-total" class="ml-2 text-green-600">0.00</span>
-                                    </div>
-                                    <div class="flex space-x-3">
-                                        <button type="button" id="cancel-new-sale" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
-                                        <button type="submit" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-colors"><i class="fas fa-save mr-2"></i> Save Sale</button>
-                                    </div>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" id="cancel-new-sale" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                                <button type="submit" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-colors"><i class="fas fa-save mr-2"></i> Save Sale</button>
+                            </div>
                         </div>
                     </div>
-                </div>
                 </div>
 
                 <!-- Edit Sale Modal -->
                 <div id="edit-sale-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
                     <div class="modal-content bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                        <div class="p-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
-                                    <i class="fas fa-edit mr-3 text-blue-600"></i> Edit Sale
-                                </h2>
-                                <button id="close-edit-sale-modal" class="text-gray-400 hover:text-gray-600 transition-colors">
-                                    <i class="fas fa-times text-xl"></i>
-                                </button>
-                            </div>
+                        <div class="modal-header">
+                            <h2 class="modal-title">
+                                <i class="fas fa-edit text-blue-600"></i> Edit Sale
+                            </h2>
+                            <button id="close-edit-sale-modal" class="modal-close" aria-label="Close modal">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
                             <form id="edit-sale-form" class="space-y-6">
                                 <input type="hidden" id="edit-sale-id" name="saleId">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label for="edit-customer-name" class="block text-sm font-medium text-gray-700 mb-2">Customer Name *</label>
-                                        <input type="text" id="edit-customer-name" name="customerName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter customer name">
+                                        <label for="edit-customer-name" class="form-label">
+                                            <i class="fas fa-user text-blue-500"></i> Customer Name *
+                                        </label>
+                                        <input type="text" id="edit-customer-name" name="customerName" required class="form-input" placeholder="Enter customer name">
                                     </div>
                                     <div>
-                                        <label for="edit-customer-phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                                        <input type="tel" id="edit-customer-phone" name="customerPhone" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter phone number">
+                                        <label for="edit-customer-phone" class="form-label">
+                                            <i class="fas fa-phone text-blue-500"></i> Phone Number *
+                                        </label>
+                                        <input type="tel" id="edit-customer-phone" name="customerPhone" required class="form-input" placeholder="Enter phone number">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label for="edit-product-name" class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
-                                        <input type="text" id="edit-product-name" name="productName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter product name">
+                                        <label for="edit-product-name" class="form-label">
+                                            <i class="fas fa-tools text-blue-500"></i> Product Name *
+                                        </label>
+                                        <input type="text" id="edit-product-name" name="productName" required class="form-input" placeholder="Enter product name">
                                     </div>
                                     <div>
-                                        <label for="edit-sale-amount" class="block text-sm font-medium text-gray-700 mb-2">Sale Amount (QR) *</label>
-                                        <input type="number" id="edit-sale-amount" name="saleAmount" step="0.01" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00">
+                                        <label for="edit-sale-amount" class="form-label">
+                                            <i class="fas fa-dollar-sign text-blue-500"></i> Sale Amount (QR) *
+                                        </label>
+                                        <input type="number" id="edit-sale-amount" name="saleAmount" step="0.01" required class="form-input" placeholder="0.00">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label for="edit-affiliate-code" class="block text-sm font-medium text-gray-700 mb-2">Affiliate Code</label>
-                                        <input type="text" id="edit-affiliate-code" name="affiliateCode" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter affiliate code (optional)">
+                                        <label for="edit-affiliate-code" class="form-label">
+                                            <i class="fas fa-hashtag text-blue-500"></i> Affiliate Code
+                                        </label>
+                                        <input type="text" id="edit-affiliate-code" name="affiliateCode" class="form-input" placeholder="Enter affiliate code (optional)">
                                     </div>
                                     <div>
-                                        <label for="edit-sale-date" class="block text-sm font-medium text-gray-700 mb-2">Sale Date *</label>
-                                        <input type="date" id="edit-sale-date" name="saleDate" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <label for="edit-sale-date" class="form-label">
+                                            <i class="fas fa-calendar text-blue-500"></i> Sale Date *
+                                        </label>
+                                        <input type="date" id="edit-sale-date" name="saleDate" required class="form-input">
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="edit-notes" class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                                    <textarea id="edit-notes" name="notes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Additional notes (optional)"></textarea>
+                                    <label for="edit-notes" class="form-label">
+                                        <i class="fas fa-sticky-note text-blue-500"></i> Notes
+                                    </label>
+                                    <textarea id="edit-notes" name="notes" rows="3" class="form-input" placeholder="Additional notes (optional)"></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Services</label>
+                                    <label class="form-label">
+                                        <i class="fas fa-list text-blue-500"></i> Services
+                                    </label>
                                     <div id="edit-sale-services-container" class="space-y-4">
                                         <!-- Services will be populated here -->
                                     </div>
-                                    <button type="button" id="edit-add-service-btn" class="mt-2 text-blue-600 text-sm hover:text-blue-800 flex items-center">
+                                    <button type="button" id="edit-add-service-btn" class="text-blue-600 text-sm hover:text-blue-800 flex items-center mt-2">
                                         <i class="fas fa-plus mr-1"></i> Add Another Service
                                     </button>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label for="edit-sale-discount" class="block text-sm font-medium text-gray-700 mb-2">Discount (QR)</label>
-                                        <input type="number" id="edit-sale-discount" name="discount" step="0.01" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00">
+                                        <label for="edit-sale-discount" class="form-label">
+                                            <i class="fas fa-percent text-blue-500"></i> Discount (QR)
+                                        </label>
+                                        <input type="number" id="edit-sale-discount" name="discount" step="0.01" class="form-input" placeholder="0.00">
                                     </div>
                                     <div class="flex items-end">
-                                        <div class="w-full">
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">Total</label>
-                                            <div class="text-lg font-semibold text-green-600">QR <span id="edit-sale-total">0.00</span></div>
+                                        <div class="total-display w-full">
+                                            <i class="fas fa-calculator mr-2"></i> Total: <span id="edit-sale-total" class="text-green-600">0.00</span> QR
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex space-x-3">
-                                    <button type="button" id="cancel-edit-sale" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
-                                    <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-save mr-2"></i> Update Sale</button>
-                                </div>
                             </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" id="cancel-edit-sale" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                            <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-save mr-2"></i> Update Sale</button>
                         </div>
                     </div>
                 </div>
