@@ -298,7 +298,16 @@
                                             <label for="add-customer-referred-by" class="form-label">
                                                 <i class="fas fa-user-friends text-green-500"></i> Referred By (Affiliate Code)
                                             </label>
-                                            <input type="text" id="add-customer-referred-by" class="form-input" placeholder="Enter referrer's affiliate code">
+                                            <div class="flex">
+                                                <input type="text" id="add-customer-referred-by" class="form-input rounded-r-none" placeholder="Enter affiliate code to assign referrer">
+                                                <button type="button" id="lookup-referrer-btn" class="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700 transition-colors" title="Lookup referrer by code">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
+                                            </div>
+                                            <div id="referrer-feedback" class="mt-2 text-sm hidden">
+                                                <span id="referrer-status" class="font-medium"></span>
+                                                <span id="referrer-name" class="text-gray-600"></span>
+                                            </div>
                                         </div>
                                     </div>
                                     <div>

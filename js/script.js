@@ -872,6 +872,50 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Referrer lookup functionality
+    const lookupReferrerBtn = document.getElementById('lookup-referrer-btn');
+    const referrerInput = document.getElementById('add-customer-referred-by');
+    
+    if (lookupReferrerBtn && referrerInput) {
+        // Manual lookup button
+        lookupReferrerBtn.addEventListener('click', function() {
+            const code = referrerInput.value.trim();
+            lookupReferrerByCode(code);
+        });
+        
+        // Real-time lookup as user types
+        let lookupTimeout;
+        referrerInput.addEventListener('input', function() {
+            clearTimeout(lookupTimeout);
+            const code = this.value.trim();
+            
+            if (code === '') {
+                clearReferrerFeedback();
+                return;
+            }
+            
+            // Debounce the lookup to avoid too many calls
+            lookupTimeout = setTimeout(() => {
+                lookupReferrerByCode(code);
+            }, 500);
+        });
+        
+        // Clear feedback when input is cleared
+        referrerInput.addEventListener('blur', function() {
+            if (this.value.trim() === '') {
+                clearReferrerFeedback();
+            }
+        });
+        
+        // Lookup on Enter key
+        referrerInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                lookupReferrerByCode(this.value.trim());
+            }
+        });
+    }
+
     const newSaleForm = document.getElementById('new-sale-form');
     if (newSaleForm) {
         newSaleForm.addEventListener('submit', function(e) {
@@ -1287,18 +1331,38 @@ function addNewCustomer() {
         return code + '-' + getTodayStr();
     };
     
-    // Find referrer if affiliate code is provided
+    // Handle referrer assignment - improved logic for direct code assignment
     const referrerCode = sanitizeInput(document.getElementById('add-customer-referred-by').value);
-    let referrerId = null;
+    let referrerAffiliateCode = null;
+    let referrerName = null;
     
     if (referrerCode) {
+        // Find referrer by exact or partial affiliate code match
         const referrer = customers.find(c => 
-            c.affiliateCode && c.affiliateCode.toLowerCase().includes(referrerCode.toLowerCase())
+            c.affiliateCode && (
+                c.affiliateCode.toLowerCase() === referrerCode.toLowerCase() ||
+                c.affiliateCode.toLowerCase().includes(referrerCode.toLowerCase())
+            )
         );
+        
         if (referrer) {
-            referrerId = referrer.id;
+            referrerAffiliateCode = referrer.affiliateCode;
+            referrerName = referrer.name;
+            showAlert(`Customer will be assigned to referrer: ${referrerName} (${referrerAffiliateCode})`, 'success');
         } else {
-            showAlert('Referrer affiliate code not found, customer will be added without referrer', 'warning');
+            // Check if the entered code exists in the affiliate codes list
+            const affiliateCodeExists = affiliateCodes.find(code => 
+                code.code.toLowerCase() === referrerCode.toLowerCase() ||
+                code.code.toLowerCase().includes(referrerCode.toLowerCase())
+            );
+            
+            if (affiliateCodeExists) {
+                // Allow direct assignment even if no customer owns this code yet
+                referrerAffiliateCode = affiliateCodeExists.code;
+                showAlert(`Customer assigned to affiliate code: ${affiliateCodeExists.code} (no customer owner found yet)`, 'warning');
+            } else {
+                showAlert('Referrer affiliate code not found. Customer will be added without referrer.', 'warning');
+            }
         }
     }
     
@@ -1311,7 +1375,7 @@ function addNewCustomer() {
         qid: sanitizeInput(document.getElementById('add-customer-qid').value),
         vehiclePlate: vehiclePlate,
         affiliateCode: generateAffiliateCode(),
-        referredBy: referrerId,
+        referredBy: referrerAffiliateCode,
         referredCustomers: [],
         accountBalance: 0,
         notes: sanitizeInput(document.getElementById('add-customer-notes').value)
@@ -1320,9 +1384,9 @@ function addNewCustomer() {
     // Add customer to the array
     customers.push(newCustomer);
     
-    // Update referrer's referred customers list if applicable
-    if (referrerId) {
-        const referrer = customers.find(c => c.id === referrerId);
+    // Update referrer's referred customers list if a customer referrer was found
+    if (referrerAffiliateCode) {
+        const referrer = customers.find(c => c.affiliateCode === referrerAffiliateCode);
         if (referrer && !referrer.referredCustomers.includes(newCustomer.id)) {
             referrer.referredCustomers.push(newCustomer.id);
         }
@@ -1335,8 +1399,12 @@ function addNewCustomer() {
     
     // Clear form
     document.getElementById('add-customer-form').reset();
+    clearReferrerFeedback();
     
-    showAlert(`Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}`);
+    const successMessage = referrerName 
+        ? `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}. Referred by: ${referrerName}`
+        : `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}`;
+    showAlert(successMessage);
 }
 
 function saveNewSale() {
@@ -1447,7 +1515,7 @@ function sanitizeInput(input) {
 function showAlert(message, type = 'success') {
     // Create a simple alert div that auto-dismisses
     const alertDiv = document.createElement('div');
-    alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`;
+    alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'}`;
     alertDiv.textContent = message;
     document.body.appendChild(alertDiv);
     
@@ -1456,4 +1524,80 @@ function showAlert(message, type = 'success') {
             alertDiv.parentNode.removeChild(alertDiv);
         }
     }, 3000);
+}
+
+// Referrer lookup functions
+function lookupReferrerByCode(code) {
+    if (!code || code.trim() === '') {
+        return clearReferrerFeedback();
+    }
+    
+    const trimmedCode = code.trim();
+    
+    // First, try to find a customer with this affiliate code
+    const customerReferrer = customers.find(c => 
+        c.affiliateCode && (
+            c.affiliateCode.toLowerCase() === trimmedCode.toLowerCase() ||
+            c.affiliateCode.toLowerCase().includes(trimmedCode.toLowerCase())
+        )
+    );
+    
+    if (customerReferrer) {
+        showReferrerFeedback('success', `Found customer: ${customerReferrer.name}`, customerReferrer.affiliateCode);
+        return customerReferrer;
+    }
+    
+    // Then, check if the code exists in the affiliate codes list
+    const affiliateCodeExists = affiliateCodes.find(code => 
+        code.code.toLowerCase() === trimmedCode.toLowerCase() ||
+        code.code.toLowerCase().includes(trimmedCode.toLowerCase())
+    );
+    
+    if (affiliateCodeExists) {
+        showReferrerFeedback('warning', `Code exists: ${affiliateCodeExists.code}`, 'No customer assigned yet');
+        return { affiliateCode: affiliateCodeExists.code, isDirectCode: true };
+    }
+    
+    // Code not found
+    showReferrerFeedback('error', 'Code not found', 'This affiliate code does not exist');
+    return null;
+}
+
+function showReferrerFeedback(type, status, details) {
+    const feedbackDiv = document.getElementById('referrer-feedback');
+    const statusSpan = document.getElementById('referrer-status');
+    const nameSpan = document.getElementById('referrer-name');
+    
+    if (!feedbackDiv || !statusSpan || !nameSpan) return;
+    
+    feedbackDiv.classList.remove('hidden');
+    statusSpan.textContent = status;
+    nameSpan.textContent = details;
+    
+    // Apply styling based on type
+    feedbackDiv.className = 'mt-2 text-sm';
+    switch (type) {
+        case 'success':
+            statusSpan.className = 'font-medium text-green-600';
+            nameSpan.className = 'text-green-500';
+            break;
+        case 'warning':
+            statusSpan.className = 'font-medium text-yellow-600';
+            nameSpan.className = 'text-yellow-500';
+            break;
+        case 'error':
+            statusSpan.className = 'font-medium text-red-600';
+            nameSpan.className = 'text-red-500';
+            break;
+        default:
+            statusSpan.className = 'font-medium text-gray-600';
+            nameSpan.className = 'text-gray-500';
+    }
+}
+
+function clearReferrerFeedback() {
+    const feedbackDiv = document.getElementById('referrer-feedback');
+    if (feedbackDiv) {
+        feedbackDiv.classList.add('hidden');
+    }
 }
