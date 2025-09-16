@@ -81,9 +81,15 @@
                 <div id="customers" class="tab-content active">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                         <h2 class="text-xl md:text-2xl font-bold text-gray-800">Customer Database</h2>
-                        <div class="relative mt-4 md:mt-0 w-full md:w-64">
-                            <input type="text" id="customer-search" placeholder="Search customers..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Search customers">
-                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <div class="flex flex-col md:flex-row items-center gap-4 mt-4 md:mt-0">
+                            <button id="add-new-customer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 w-full md:w-auto">
+                                <i class="fas fa-user-plus"></i>
+                                Add Customer
+                            </button>
+                            <div class="relative w-full md:w-64">
+                                <input type="text" id="customer-search" placeholder="Search customers..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Search customers">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
                         </div>
                     </div>
                   
@@ -240,6 +246,82 @@
                             <div class="modal-footer">
                                 <button type="button" id="cancel-edit-customer" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
                                 <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-save mr-2"></i> Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add New Customer Modal -->
+                    <div id="add-customer-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+                        <div class="modal-content bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                            <div class="modal-header">
+                                <h2 class="modal-title">
+                                    <i class="fas fa-user-plus text-green-600"></i> Add New Customer
+                                </h2>
+                                <button id="close-add-customer-modal" class="modal-close" aria-label="Close modal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="add-customer-form" class="space-y-6">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="add-customer-name" class="form-label">
+                                                <i class="fas fa-user text-green-500"></i> Full Name *
+                                            </label>
+                                            <input type="text" id="add-customer-name" class="form-input" required placeholder="Enter customer's full name">
+                                        </div>
+                                        <div>
+                                            <label for="add-customer-email" class="form-label">
+                                                <i class="fas fa-envelope text-green-500"></i> Email
+                                            </label>
+                                            <input type="email" id="add-customer-email" class="form-input" placeholder="customer@example.com">
+                                        </div>
+                                        <div>
+                                            <label for="add-customer-phone" class="form-label">
+                                                <i class="fas fa-phone text-green-500"></i> Phone Number *
+                                            </label>
+                                            <input type="tel" id="add-customer-phone" class="form-input" required placeholder="+974 XXXX XXXX">
+                                        </div>
+                                        <div>
+                                            <label for="add-customer-qid" class="form-label">
+                                                <i class="fas fa-id-card text-green-500"></i> QID
+                                            </label>
+                                            <input type="text" id="add-customer-qid" class="form-input" placeholder="Qatar ID Number">
+                                        </div>
+                                        <div>
+                                            <label for="add-customer-vehicle-plate" class="form-label">
+                                                <i class="fas fa-car text-green-500"></i> Vehicle Plate Number *
+                                            </label>
+                                            <input type="text" id="add-customer-vehicle-plate" class="form-input" required placeholder="Vehicle registration number">
+                                        </div>
+                                        <div>
+                                            <label for="add-customer-referred-by" class="form-label">
+                                                <i class="fas fa-user-friends text-green-500"></i> Referred By (Affiliate Code)
+                                            </label>
+                                            <input type="text" id="add-customer-referred-by" class="form-input" placeholder="Enter referrer's affiliate code">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="add-customer-notes" class="form-label">
+                                            <i class="fas fa-sticky-note text-green-500"></i> Notes
+                                        </label>
+                                        <textarea id="add-customer-notes" rows="4" class="form-input" placeholder="Additional notes about the customer (optional)"></textarea>
+                                    </div>
+                                    <div class="bg-blue-50 p-4 rounded-lg">
+                                        <h4 class="font-medium text-blue-800 mb-2">
+                                            <i class="fas fa-info-circle"></i> Customer Information
+                                        </h4>
+                                        <ul class="text-sm text-blue-700 space-y-1">
+                                            <li>• An affiliate code will be automatically generated for this customer</li>
+                                            <li>• Account balance will start at QR 0.00</li>
+                                            <li>• Customer can use their affiliate code for referrals</li>
+                                        </ul>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" id="cancel-add-customer" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                                <button type="submit" id="save-add-customer" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-colors"><i class="fas fa-user-plus mr-2"></i> Add Customer</button>
                             </div>
                         </div>
                     </div>

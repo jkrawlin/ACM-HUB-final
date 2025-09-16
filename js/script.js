@@ -824,6 +824,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    const addNewCustomerBtn = document.getElementById('add-new-customer-btn');
+    if (addNewCustomerBtn) {
+        addNewCustomerBtn.addEventListener('click', function() {
+            showModal('add-customer-modal');
+        });
+    }
+
     const updateCommissionBtn = document.getElementById('update-commission-btn');
     if (updateCommissionBtn) {
         updateCommissionBtn.addEventListener('click', function() {
@@ -839,7 +846,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Modal close buttons
-    document.querySelectorAll('.modal-close, #cancel-edit-customer, #cancel-referred-customers, #cancel-new-sale, #cancel-edit-sale').forEach(button => {
+    document.querySelectorAll('.modal-close, #cancel-edit-customer, #cancel-referred-customers, #cancel-new-sale, #cancel-edit-sale, #cancel-add-customer').forEach(button => {
         button.addEventListener('click', function() {
             const modal = this.closest('.modal-backdrop');
             if (modal) {
@@ -854,6 +861,14 @@ document.addEventListener('DOMContentLoaded', function() {
         editCustomerForm.addEventListener('submit', function(e) {
             e.preventDefault();
             saveCustomerChanges();
+        });
+    }
+
+    const addCustomerForm = document.getElementById('add-customer-form');
+    if (addCustomerForm) {
+        addCustomerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            addNewCustomer();
         });
     }
 
@@ -1236,6 +1251,92 @@ function saveCustomerChanges() {
         hideModal('edit-customer-modal');
         showAlert('Customer updated successfully!');
     }
+}
+
+function addNewCustomer() {
+    // Validate required fields
+    const name = sanitizeInput(document.getElementById('add-customer-name').value);
+    const phone = sanitizeInput(document.getElementById('add-customer-phone').value);
+    const vehiclePlate = sanitizeInput(document.getElementById('add-customer-vehicle-plate').value);
+    
+    if (!name || !phone || !vehiclePlate) {
+        showAlert('Please fill in all required fields (Name, Phone, Vehicle Plate)', 'error');
+        return;
+    }
+    
+    // Check if customer with same phone or vehicle plate already exists
+    const existingCustomer = customers.find(c => 
+        c.phone === phone || c.vehiclePlate === vehiclePlate
+    );
+    
+    if (existingCustomer) {
+        if (existingCustomer.phone === phone) {
+            showAlert('A customer with this phone number already exists', 'error');
+        } else {
+            showAlert('A customer with this vehicle plate already exists', 'error');
+        }
+        return;
+    }
+    
+    // Generate unique affiliate code
+    const generateAffiliateCode = () => {
+        let code;
+        do {
+            code = 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        } while (customers.some(c => c.affiliateCode === code));
+        return code + '-' + getTodayStr();
+    };
+    
+    // Find referrer if affiliate code is provided
+    const referrerCode = sanitizeInput(document.getElementById('add-customer-referred-by').value);
+    let referrerId = null;
+    
+    if (referrerCode) {
+        const referrer = customers.find(c => 
+            c.affiliateCode && c.affiliateCode.toLowerCase().includes(referrerCode.toLowerCase())
+        );
+        if (referrer) {
+            referrerId = referrer.id;
+        } else {
+            showAlert('Referrer affiliate code not found, customer will be added without referrer', 'warning');
+        }
+    }
+    
+    // Create new customer object
+    const newCustomer = {
+        id: Math.max(...customers.map(c => c.id), 0) + 1,
+        name: name,
+        email: sanitizeInput(document.getElementById('add-customer-email').value),
+        phone: phone,
+        qid: sanitizeInput(document.getElementById('add-customer-qid').value),
+        vehiclePlate: vehiclePlate,
+        affiliateCode: generateAffiliateCode(),
+        referredBy: referrerId,
+        referredCustomers: [],
+        accountBalance: 0,
+        notes: sanitizeInput(document.getElementById('add-customer-notes').value)
+    };
+    
+    // Add customer to the array
+    customers.push(newCustomer);
+    
+    // Update referrer's referred customers list if applicable
+    if (referrerId) {
+        const referrer = customers.find(c => c.id === referrerId);
+        if (referrer && !referrer.referredCustomers.includes(newCustomer.id)) {
+            referrer.referredCustomers.push(newCustomer.id);
+        }
+    }
+    
+    // Save to Firebase and update UI
+    saveDataToFirestore();
+    renderCustomerTable();
+    hideModal('add-customer-modal');
+    
+    // Clear form
+    document.getElementById('add-customer-form').reset();
+    
+    showAlert(`Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}`);
 }
 
 function saveNewSale() {
