@@ -26,6 +26,28 @@ const db = firebase.firestore();  // Firestore database instance
 const auth = firebase.auth(); // Auth instance for login
 const analytics = firebase.analytics();  // Analytics if you want to use it (optional)
 
+// Show alert function for user notifications
+function showAlert(message) {
+    // Create alert element if it doesn't exist
+    let alertElement = document.getElementById('custom-alert');
+    if (!alertElement) {
+        alertElement = document.createElement('div');
+        alertElement.id = 'custom-alert';
+        alertElement.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 max-w-sm';
+        alertElement.style.display = 'none';
+        document.body.appendChild(alertElement);
+    }
+
+    // Set message and show
+    alertElement.textContent = message;
+    alertElement.style.display = 'block';
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        alertElement.style.display = 'none';
+    }, 3000);
+}
+
 // Move loadDataFromFirestore outside of DOMContentLoaded so it can be called from auth.onAuthStateChanged
 function loadDataFromFirestore() {
     // Load customers
