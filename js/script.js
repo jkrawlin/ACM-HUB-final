@@ -90,6 +90,7 @@ const codesPerPage = 10;
 
 // Global variables for filtering
 let filterDateRange = { from: '', to: '' };
+let searchTerm = ''; // Add search term variable
 
 // Render Customer Table with Pagination and Sorting
 function renderCustomerTable(data = customers, page = 1) {
@@ -269,6 +270,10 @@ function renderCodesTable() {
         codesTableBody.appendChild(row);
     });
 
+    // Update pagination controls and count
+    updatePaginationControls(codes.length);
+    updateCodesCount();
+
     // Add event listeners for copy buttons
     document.querySelectorAll('.copy-code-btn').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -313,6 +318,17 @@ function filteredCodes() {
         // Default: today only
         codes = codes.filter(code => code.createdAt === getTodayStr());
     }
+
+    // Filter by search term
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        codes = codes.filter(code =>
+            code.code.toLowerCase().includes(term) ||
+            code.status.toLowerCase().includes(term) ||
+            (code.usedInSales && code.usedInSales.some(invoice => invoice.toLowerCase().includes(term)))
+        );
+    }
+
     return codes;
 }
 
@@ -346,8 +362,16 @@ function updateCodesCount() {
     const codesCount = document.getElementById('codes-count');
     if (!codesCount) return;
 
-    const availableCount = affiliateCodes.filter(code => code.status === 'available').length;
-    codesCount.textContent = `${affiliateCodes.length} codes total (${availableCount} available)`;
+    const filteredCodesList = filteredCodes();
+    const availableCount = filteredCodesList.filter(code => code.status === 'available').length;
+    const totalFiltered = filteredCodesList.length;
+    const totalAll = affiliateCodes.length;
+
+    if (searchTerm || filterDateRange.from || filterDateRange.to) {
+        codesCount.textContent = `${totalFiltered} codes found (${availableCount} available) - filtered from ${totalAll} total`;
+    } else {
+        codesCount.textContent = `${totalAll} codes total (${availableCount} available)`;
+    }
 }
 
 // Move loadDataFromFirestore outside of DOMContentLoaded so it can be called from auth.onAuthStateChanged
@@ -552,4 +576,14 @@ document.addEventListener('DOMContentLoaded', function() {
             notificationsDropdown.classList.add('hidden');
         }
     });
+
+    // Affiliate Codes Search
+    const searchCodesInput = document.getElementById('search-codes');
+    if (searchCodesInput) {
+        searchCodesInput.addEventListener('input', function() {
+            searchTerm = this.value.trim();
+            currentPage = 1; // Reset to first page when searching
+            renderCodesTable();
+        });
+    }
 });
