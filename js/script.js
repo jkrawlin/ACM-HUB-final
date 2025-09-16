@@ -866,9 +866,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const addCustomerForm = document.getElementById('add-customer-form');
     if (addCustomerForm) {
-        addCustomerForm.addEventListener('submit', function(e) {
+        addCustomerForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            addNewCustomer();
+            e.stopPropagation();
+            try {
+                await addNewCustomer();
+            } catch (error) {
+                console.error('Error adding customer:', error);
+                showAlert('Error adding customer. Please try again.', 'error');
+            }
+        });
+    }
+
+    // Also handle the submit button directly as a fallback
+    const saveCustomerBtn = document.getElementById('save-add-customer');
+    if (saveCustomerBtn) {
+        saveCustomerBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                await addNewCustomer();
+            } catch (error) {
+                console.error('Error adding customer:', error);
+                showAlert('Error adding customer. Please try again.', 'error');
+            }
         });
     }
 
@@ -1297,30 +1318,31 @@ function saveCustomerChanges() {
     }
 }
 
-function addNewCustomer() {
-    // Validate required fields
-    const name = sanitizeInput(document.getElementById('add-customer-name').value);
-    const phone = sanitizeInput(document.getElementById('add-customer-phone').value);
-    const vehiclePlate = sanitizeInput(document.getElementById('add-customer-vehicle-plate').value);
-    
-    if (!name || !phone || !vehiclePlate) {
-        showAlert('Please fill in all required fields (Name, Phone, Vehicle Plate)', 'error');
-        return;
-    }
-    
-    // Check if customer with same phone or vehicle plate already exists
-    const existingCustomer = customers.find(c => 
-        c.phone === phone || c.vehiclePlate === vehiclePlate
-    );
-    
-    if (existingCustomer) {
-        if (existingCustomer.phone === phone) {
-            showAlert('A customer with this phone number already exists', 'error');
-        } else {
-            showAlert('A customer with this vehicle plate already exists', 'error');
+async function addNewCustomer() {
+    try {
+        // Validate required fields
+        const name = sanitizeInput(document.getElementById('add-customer-name').value);
+        const phone = sanitizeInput(document.getElementById('add-customer-phone').value);
+        const vehiclePlate = sanitizeInput(document.getElementById('add-customer-vehicle-plate').value);
+        
+        if (!name || !phone || !vehiclePlate) {
+            showAlert('Please fill in all required fields (Name, Phone, Vehicle Plate)', 'error');
+            return;
         }
-        return;
-    }
+        
+        // Check if customer with same phone or vehicle plate already exists
+        const existingCustomer = customers.find(c => 
+            c.phone === phone || c.vehiclePlate === vehiclePlate
+        );
+        
+        if (existingCustomer) {
+            if (existingCustomer.phone === phone) {
+                showAlert('A customer with this phone number already exists', 'error');
+            } else {
+                showAlert('A customer with this vehicle plate already exists', 'error');
+            }
+            return;
+        }
     
     // Generate unique affiliate code
     const generateAffiliateCode = () => {
@@ -1392,19 +1414,24 @@ function addNewCustomer() {
         }
     }
     
-    // Save to Firebase and update UI
-    saveDataToFirestore();
-    renderCustomerTable();
-    hideModal('add-customer-modal');
-    
-    // Clear form
-    document.getElementById('add-customer-form').reset();
-    clearReferrerFeedback();
-    
-    const successMessage = referrerName 
-        ? `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}. Referred by: ${referrerName}`
-        : `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}`;
-    showAlert(successMessage);
+        // Save to Firebase and update UI
+        saveDataToFirestore();
+        renderCustomerTable();
+        hideModal('add-customer-modal');
+        
+        // Clear form
+        document.getElementById('add-customer-form').reset();
+        clearReferrerFeedback();
+        
+        const successMessage = referrerName 
+            ? `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}. Referred by: ${referrerName}`
+            : `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}`;
+        showAlert(successMessage);
+        
+    } catch (error) {
+        console.error('Error in addNewCustomer:', error);
+        showAlert('An error occurred while adding the customer. Please try again.', 'error');
+    }
 }
 
 function saveNewSale() {
