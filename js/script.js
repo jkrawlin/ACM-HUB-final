@@ -1476,12 +1476,9 @@ async function addNewCustomer() {
         
         // Clear form
         document.getElementById('add-customer-form').reset();
-        clearReferrerFeedback();
         clearAffiliateCodeFeedback();
         
-        const successMessage = referrerName 
-            ? `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}. Referred by: ${referrerName}`
-            : `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}`;
+        const successMessage = `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}`;
         showAlert(successMessage);
         
     } catch (error) {
