@@ -936,6 +936,50 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Affiliate code assignment lookup functionality
+    const lookupAffiliateCodeBtn = document.getElementById('lookup-affiliate-code-btn');
+    const affiliateCodeInput = document.getElementById('add-customer-affiliate-code');
+    
+    if (lookupAffiliateCodeBtn && affiliateCodeInput) {
+        // Manual lookup button
+        lookupAffiliateCodeBtn.addEventListener('click', function() {
+            const code = affiliateCodeInput.value.trim();
+            lookupAffiliateCodeForAssignment(code);
+        });
+        
+        // Real-time lookup as user types
+        let affiliateCodeTimeout;
+        affiliateCodeInput.addEventListener('input', function() {
+            clearTimeout(affiliateCodeTimeout);
+            const code = this.value.trim();
+            
+            if (code === '') {
+                clearAffiliateCodeFeedback();
+                return;
+            }
+            
+            // Debounce the lookup to avoid too many calls
+            affiliateCodeTimeout = setTimeout(() => {
+                lookupAffiliateCodeForAssignment(code);
+            }, 500);
+        });
+        
+        // Clear feedback when input is cleared
+        affiliateCodeInput.addEventListener('blur', function() {
+            if (this.value.trim() === '') {
+                clearAffiliateCodeFeedback();
+            }
+        });
+        
+        // Lookup on Enter key
+        affiliateCodeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                lookupAffiliateCodeForAssignment(this.value.trim());
+            }
+        });
+    }
 
     const newSaleForm = document.getElementById('new-sale-form');
     if (newSaleForm) {
@@ -1364,52 +1408,72 @@ async function addNewCustomer() {
             }
             return;
         }
-    
-    // Generate unique affiliate code
-    const generateAffiliateCode = () => {
-        let code;
-        do {
-            code = 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase();
-        } while (customers.some(c => c.affiliateCode === code));
-        return code + '-' + getTodayStr();
-    };
-    
-    // Handle referrer assignment - improved logic for direct code assignment
-    const referrerCode = sanitizeInput(document.getElementById('add-customer-referred-by').value);
-    let referrerAffiliateCode = null;
-    let referrerName = null;
-    
-    if (referrerCode) {
-        // Find referrer by exact or partial affiliate code match
-        const referrer = customers.find(c => 
-            c.affiliateCode && (
-                c.affiliateCode.toLowerCase() === referrerCode.toLowerCase() ||
-                c.affiliateCode.toLowerCase().includes(referrerCode.toLowerCase())
-            )
-        );
         
-        if (referrer) {
-            referrerAffiliateCode = referrer.affiliateCode;
-            referrerName = referrer.name;
-            showAlert(`Customer will be assigned to referrer: ${referrerName} (${referrerAffiliateCode})`, 'success');
+        // Generate unique affiliate code function
+        const generateAffiliateCode = () => {
+            let code;
+            do {
+                code = 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            } while (customers.some(c => c.affiliateCode === code) || affiliateCodes.some(c => c.code === code));
+            return code;
+        };
+    
+        // Generate or assign affiliate code
+        const assignedAffiliateCode = sanitizeInput(document.getElementById('add-customer-affiliate-code').value);
+        let customerAffiliateCode;
+        
+        if (assignedAffiliateCode) {
+            // Check if the assigned code is valid and available
+            const codeCheck = lookupAffiliateCodeForAssignment(assignedAffiliateCode);
+            if (codeCheck) {
+                customerAffiliateCode = assignedAffiliateCode;
+                // Mark the code as assigned in the affiliate codes list
+                const affiliateCodeObj = affiliateCodes.find(c => c.code === assignedAffiliateCode);
+                if (affiliateCodeObj) {
+                    affiliateCodeObj.status = 'assigned';
+                }
+            } else {
+                showAlert('Invalid or unavailable affiliate code. A new code will be generated.', 'warning');
+                customerAffiliateCode = generateAffiliateCode();
+            }
         } else {
-            // Check if the entered code exists in the affiliate codes list
-            const affiliateCodeExists = affiliateCodes.find(code => 
-                code.code.toLowerCase() === referrerCode.toLowerCase() ||
-                code.code.toLowerCase().includes(referrerCode.toLowerCase())
+            customerAffiliateCode = generateAffiliateCode();
+        }
+        
+        // Handle referrer assignment - improved logic for direct code assignment
+        const referrerCode = sanitizeInput(document.getElementById('add-customer-referred-by').value);
+        let referrerAffiliateCode = null;
+        let referrerName = null;
+        
+        if (referrerCode) {
+            // Find referrer by exact or partial affiliate code match
+            const referrer = customers.find(c => 
+                c.affiliateCode && (
+                    c.affiliateCode.toLowerCase() === referrerCode.toLowerCase() ||
+                    c.affiliateCode.toLowerCase().includes(referrerCode.toLowerCase())
+                )
             );
             
-            if (affiliateCodeExists) {
-                // Allow direct assignment even if no customer owns this code yet
-                referrerAffiliateCode = affiliateCodeExists.code;
-                showAlert(`Customer assigned to affiliate code: ${affiliateCodeExists.code} (no customer owner found yet)`, 'warning');
+            if (referrer) {
+                referrerAffiliateCode = referrer.affiliateCode;
+                referrerName = referrer.name;
+                showAlert(`Customer will be assigned to referrer: ${referrerName} (${referrerAffiliateCode})`, 'success');
             } else {
-                showAlert('Referrer affiliate code not found. Customer will be added without referrer.', 'warning');
+                // Check if the entered code exists in the affiliate codes list
+                const affiliateCodeExists = affiliateCodes.find(code => 
+                    code.code.toLowerCase() === referrerCode.toLowerCase() ||
+                    code.code.toLowerCase().includes(referrerCode.toLowerCase())
+                );
+                
+                if (affiliateCodeExists) {
+                    // Allow direct assignment even if no customer owns this code yet
+                    referrerAffiliateCode = affiliateCodeExists.code;
+                    showAlert(`Customer assigned to affiliate code: ${affiliateCodeExists.code} (no customer owner found yet)`, 'warning');
+                } else {
+                    showAlert('Referrer affiliate code not found. Customer will be added without referrer.', 'warning');
+                }
             }
-        }
-    }
-    
-    // Create new customer object
+        }    // Create new customer object
     const newCustomer = {
         id: Math.max(...customers.map(c => c.id), 0) + 1,
         name: name,
@@ -1417,7 +1481,7 @@ async function addNewCustomer() {
         phone: phone,
         qid: sanitizeInput(document.getElementById('add-customer-qid').value),
         vehiclePlate: vehiclePlate,
-        affiliateCode: generateAffiliateCode(),
+        affiliateCode: customerAffiliateCode,
         referredBy: referrerAffiliateCode,
         referredCustomers: [],
         accountBalance: 0,
@@ -1443,6 +1507,7 @@ async function addNewCustomer() {
         // Clear form
         document.getElementById('add-customer-form').reset();
         clearReferrerFeedback();
+        clearAffiliateCodeFeedback();
         
         const successMessage = referrerName 
             ? `Customer "${name}" added successfully! Affiliate code: ${newCustomer.affiliateCode}. Referred by: ${referrerName}`
@@ -1670,6 +1735,43 @@ function lookupReferrerByCode(code) {
     return null;
 }
 
+function lookupAffiliateCodeForAssignment(code) {
+    if (!code || code.trim() === '') {
+        return clearAffiliateCodeFeedback();
+    }
+    
+    const trimmedCode = code.trim();
+    
+    // Check if the code exists in the affiliate codes list
+    const affiliateCodeExists = affiliateCodes.find(codeObj => 
+        codeObj.code.toLowerCase() === trimmedCode.toLowerCase()
+    );
+    
+    if (affiliateCodeExists) {
+        if (affiliateCodeExists.status === 'available') {
+            showAffiliateCodeFeedback('success', `Available code: ${affiliateCodeExists.code}`, 'Ready to assign');
+            return affiliateCodeExists;
+        } else {
+            showAffiliateCodeFeedback('warning', `Code: ${affiliateCodeExists.code}`, `Status: ${affiliateCodeExists.status}`);
+            return affiliateCodeExists;
+        }
+    }
+    
+    // Check if a customer already has this code
+    const customerWithCode = customers.find(c => 
+        c.affiliateCode && c.affiliateCode.toLowerCase() === trimmedCode.toLowerCase()
+    );
+    
+    if (customerWithCode) {
+        showAffiliateCodeFeedback('error', 'Code already assigned', `Customer: ${customerWithCode.name}`);
+        return null;
+    }
+    
+    // Code not found
+    showAffiliateCodeFeedback('error', 'Code not found', 'This affiliate code does not exist');
+    return null;
+}
+
 function showReferrerFeedback(type, status, details) {
     const feedbackDiv = document.getElementById('referrer-feedback');
     const statusSpan = document.getElementById('referrer-status');
@@ -1704,6 +1806,45 @@ function showReferrerFeedback(type, status, details) {
 
 function clearReferrerFeedback() {
     const feedbackDiv = document.getElementById('referrer-feedback');
+    if (feedbackDiv) {
+        feedbackDiv.classList.add('hidden');
+    }
+}
+
+function showAffiliateCodeFeedback(type, status, details) {
+    const feedbackDiv = document.getElementById('affiliate-code-feedback');
+    const statusSpan = document.getElementById('affiliate-code-status');
+    const detailsSpan = document.getElementById('affiliate-code-details');
+    
+    if (!feedbackDiv || !statusSpan || !detailsSpan) return;
+    
+    feedbackDiv.classList.remove('hidden');
+    statusSpan.textContent = status;
+    detailsSpan.textContent = details;
+    
+    // Apply styling based on type
+    feedbackDiv.className = 'mt-2 text-sm';
+    switch (type) {
+        case 'success':
+            statusSpan.className = 'font-medium text-green-600';
+            detailsSpan.className = 'text-green-500';
+            break;
+        case 'warning':
+            statusSpan.className = 'font-medium text-yellow-600';
+            detailsSpan.className = 'text-yellow-500';
+            break;
+        case 'error':
+            statusSpan.className = 'font-medium text-red-600';
+            detailsSpan.className = 'text-red-500';
+            break;
+        default:
+            statusSpan.className = 'font-medium text-gray-600';
+            detailsSpan.className = 'text-gray-500';
+    }
+}
+
+function clearAffiliateCodeFeedback() {
+    const feedbackDiv = document.getElementById('affiliate-code-feedback');
     if (feedbackDiv) {
         feedbackDiv.classList.add('hidden');
     }

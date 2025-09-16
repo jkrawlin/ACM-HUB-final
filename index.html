@@ -295,6 +295,22 @@
                                             <input type="text" id="add-customer-vehicle-plate" class="form-input" required placeholder="Vehicle registration number">
                                         </div>
                                         <div>
+                                            <label for="add-customer-affiliate-code" class="form-label">
+                                                <i class="fas fa-hashtag text-green-500"></i> Assign Affiliate Code
+                                            </label>
+                                            <div class="flex">
+                                                <input type="text" id="add-customer-affiliate-code" class="form-input rounded-r-none" placeholder="Enter specific affiliate code to assign (optional)">
+                                                <button type="button" id="lookup-affiliate-code-btn" class="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700 transition-colors" title="Lookup affiliate code">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
+                                            </div>
+                                            <div id="affiliate-code-feedback" class="mt-2 text-sm hidden">
+                                                <span id="affiliate-code-status" class="font-medium"></span>
+                                                <span id="affiliate-code-details" class="text-gray-600"></span>
+                                            </div>
+                                            <p class="text-xs text-gray-500 mt-1">Leave empty to auto-generate a new code</p>
+                                        </div>
+                                        <div>
                                             <label for="add-customer-referred-by" class="form-label">
                                                 <i class="fas fa-user-friends text-green-500"></i> Assign Affiliate Code
                                             </label>
