@@ -1,0 +1,114 @@
+/* Custom styles (unchanged from previous white theme) */
+.active-tab {
+    @apply bg-blue-600 text-white border-b-2 border-blue-600;
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+.input-highlight {
+    @apply border-2 border-blue-500;
+}
+.table-row:hover {
+    @apply bg-gray-100;
+}
+.notification-badge {
+    @apply absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center;
+}
+.table-container {
+    @apply overflow-x-auto overflow-y-auto min-h-auto height-auto;
+}
+.modal-backdrop {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 opacity-0 transition-opacity duration-300;
+}
+.modal-backdrop.show {
+    @apply opacity-100;
+}
+.modal-content {
+    @apply bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg md:max-w-2xl mx-4 transform scale-95 transition-transform duration-300;
+}
+.modal-backdrop.show .modal-content {
+    @apply scale-100;
+}
+body {
+    font-family: 'Inter', sans-serif;
+}
+h1, h2, h3, h4 {
+    @apply font-semibold;
+}
+button, input, select, textarea {
+    @apply transition duration-200;
+}
+/* Custom Alert */
+.custom-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+.custom-alert.show {
+    opacity: 1;
+}
+/* Modal accessibility */
+.modal-backdrop[aria-hidden="false"] {
+    display: flex !important;
+}
+.modal-backdrop[aria-hidden="true"] {
+    display: none !important;
+}
+/* Table accessibility */
+th[scope="col"] {
+    background-color: #f8f9fa;
+}
+/* Input success/error states */
+.input-success {
+    border-color: #22c55e !important;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+.input-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+/* Enhanced Form Styles */
+.form-label {
+    @apply flex items-center text-sm font-medium text-gray-700 mb-1;
+}
+.form-input:disabled {
+    @apply bg-white cursor-not-allowed;
+}
+.copy-btn {
+    @apply ml-2 bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 text-sm;
+}
+.payout-history-list {
+    @apply mt-2 text-sm text-gray-600 list-disc pl-5;
+}
+/* For draggable services rows in modal */
+.service-row {
+    cursor: move;
+}
+/* Login page styles */
+#login-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f3f4f6;
+}
+#login-page form {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+#app-container {
+    display: none;
+}

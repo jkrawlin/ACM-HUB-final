@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACM HUB</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-white min-h-screen">
+    <!-- Login Page -->
+    <div id="login-page">
+        <h1 class="text-3xl font-bold mb-6">Login to ACM HUB</h1>
+        <form class="space-y-4">
+            <input id="email" type="email" placeholder="Email" class="border p-2 w-full rounded">
+            <input id="password" type="password" placeholder="Password" class="border p-2 w-full rounded">
+            <div class="flex space-x-2">
+                <button type="button" onclick="signup()" class="bg-blue-600 text-white p-2 rounded w-full">Signup</button>
+                <button type="button" onclick="login()" class="bg-green-600 text-white p-2 rounded w-full">Login</button>
+            </div>
+            <button type="button" onclick="resetPassword()" class="bg-yellow-600 text-white p-2 rounded w-full">Forgot Password</button>
+        </form>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl" id="app-container">
+        <!-- Custom Alert Container -->
+        <div id="custom-alert" class="custom-alert"></div>
+        <!-- Header -->
+        <header class="bg-white shadow-md rounded-lg p-6 mb-8">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                <div class="flex items-center mb-4 md:mb-0">
+                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800">ACM HUB</h1>
+                </div>
+                <div class="relative">
+                    <button id="notifications-btn" class="bg-white p-3 rounded-full relative hover:bg-gray-100" aria-label="Notifications">
+                        <i class="fas fa-bell text-gray-600"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-10 border border-gray-200">
+                        <div class="p-4 border-b bg-white">
+                            <h3 class="text-lg font-semibold text-gray-800">Notifications</h3>
+                        </div>
+                        <div class="overflow-y-auto max-h-60">
+                            <div class="p-4 border-b hover:bg-gray-100 cursor-pointer">
+                                <p class="text-sm text-gray-700">New referral from Ahmed (Code: REF123)</p>
+                                <p class="text-xs text-gray-500">2 mins ago</p>
+                            </div>
+                            <div class="p-4 border-b hover:bg-gray-100 cursor-pointer">
+                                <p class="text-sm text-gray-700">Sale completed for QR-1 service</p>
+                                <p class="text-xs text-gray-500">30 mins ago</p>
+                            </div>
+                            <div class="p-4 hover:bg-gray-100 cursor-pointer">
+                                <p class="text-sm text-gray-700">New customer registration: Mohammed</p>
+                                <p class="text-xs text-gray-500">1 hour ago</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="logout()" class="bg-red-600 text-white p-2 ml-4 rounded">Logout</button>
+                </div>
+            </div>
+        </header>
+        <!-- Main Content -->
+        <main id="main-content" class="bg-white shadow-md rounded-lg overflow-hidden">
+            <!-- Tabs Navigation -->
+            <div class="flex border-b bg-white">
+                <button class="tab-btn py-3 px-6 font-medium text-gray-700 active-tab" data-tab="customers" aria-selected="true">Customers</button>
+                <button class="tab-btn py-3 px-2 font-medium text-gray-700 hover:bg-gray-100" data-tab="sales" aria-selected="false">Sales</button>
+                <button class="tab-btn py-3 px-6 font-medium text-gray-700 hover:bg-gray-100" data-tab="referrals" aria-selected="false">Referral Program</button>
+            </div>
+            <!-- Tab Contents -->
+            <div class="p-6">
+                <!-- Customers Tab -->
+                <div id="customers" class="tab-content active">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Customer Database</h2>
+                        <div class="relative mt-4 md:mt-0 w-full md:w-64">
+                            <input type="text" id="customer-search" placeholder="Search customers..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Search customers">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                  
+                    <div class="table-container">
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="sticky top-0 bg-white">
+                                <tr>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="name" data-order="asc">Name</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 hidden md:table-cell cursor-pointer" data-sort="email" data-order="asc">Email</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="phone" data-order="asc">Phone</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 hidden md:table-cell cursor-pointer" data-sort="qid" data-order="asc">QID</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="vehiclePlate" data-order="asc">Vehicle Plate</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="affiliateCode" data-order="asc">Affiliate Code</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="accountBalance" data-order="asc">Account Balance</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700">Referred Customers</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customer-table-body"></tbody>
+                        </table>
+                    </div>
+                  
+                    <div class="mt-4 flex flex-col md:flex-row justify-between items-center">
+                        <span id="customer-count" class="text-sm text-gray-600">0 customers found</span>
+                        <div class="flex space-x-2 mt-4 md:mt-0">
+                            <button id="prev-customer-page" class="px-4 py-2 border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-100" disabled aria-label="Previous page">Previous</button>
+                            <span id="customer-page-info" class="px-4 py-2 text-sm text-gray-600">Page 1 of 1</span>
+                            <button id="next-customer-page" class="px-4 py-2 border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-100" disabled aria-label="Next page">Next</button>
+                        </div>
+                    </div>
+                    <!-- Referred Customers Modal (Upgraded with better UI) -->
+                    <div id="referred-customers-modal" class="modal-backdrop hidden">
+                        <div class="modal-content max-w-3xl">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-800 flex items-center"><i class="fas fa-users mr-2 text-blue-600"></i> Referred Customers</h3>
+                                <button id="close-referred-customers-modal" class="text-gray-500 hover:text-gray-700" aria-label="Close modal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="table-container border rounded-lg overflow-hidden">
+                                <table class="min-w-full bg-white">
+                                    <thead class="bg-blue-50">
+                                        <tr>
+                                            <th class="py-3 px-4 text-left text-sm font-medium text-blue-800">Name</th>
+                                            <th class="py-3 px-4 text-left text-sm font-medium text-blue-800 hidden md:table-cell">Email</th>
+                                            <th class="py-3 px-4 text-left text-sm font-medium text-blue-800">Phone</th>
+                                            <th class="py-3 px-4 text-left text-sm font-medium text-blue-800 hidden md:table-cell">QID</th>
+                                            <th class="py-3 px-4 text-left text-sm font-medium text-blue-800">Vehicle Plate</th>
+                                            <th class="py-3 px-4 text-left text-sm font-medium text-blue-800">Affiliate Code</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="referred-customers-table-body" class="divide-y divide-gray-200"></tbody>
+                                </table>
+                            </div>
+                            <p id="referred-customers-count" class="mt-4 text-sm text-gray-600">0 referred customers found</p>
+                            <div class="flex justify-end mt-4">
+                                <button id="cancel-referred-customers" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors" aria-label="Close">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Edit Customer Modal -->
+                    <div id="edit-customer-modal" class="modal-backdrop hidden">
+                        <div class="modal-content max-w-3xl">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-800 flex items-center"><i class="fas fa-user-edit mr-2 text-blue-600"></i> Edit Customer</h3>
+                                <button id="close-edit-customer-modal" class="text-gray-500 hover:text-gray-700" aria-label="Close modal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <form id="edit-customer-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <input type="hidden" id="edit-customer-id">
+                                <div>
+                                    <label for="edit-customer-name" class="form-label"><i class="fas fa-user mr-1 text-gray-500"></i> Full Name</label>
+                                    <input type="text" id="edit-customer-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required>
+                                </div>
+                                <div>
+                                    <label for="edit-customer-email" class="form-label"><i class="fas fa-envelope mr-1 text-gray-500"></i> Email</label>
+                                    <input type="email" id="edit-customer-email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
+                                </div>
+                                <div>
+                                    <label for="edit-customer-phone" class="form-label"><i class="fas fa-phone mr-1 text-gray-500"></i> Phone Number</label>
+                                    <input type="tel" id="edit-customer-phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required>
+                                </div>
+                                <div>
+                                    <label for="edit-customer-qid" class="form-label"><i class="fas fa-id-card mr-1 text-gray-500"></i> QID</label>
+                                    <input type="text" id="edit-customer-qid" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input">
+                                </div>
+                                <div>
+                                    <label for="edit-customer-vehicle-plate" class="form-label"><i class="fas fa-car mr-1 text-gray-500"></i> Vehicle Plate Number</label>
+                                    <input type="text" id="edit-customer-vehicle-plate" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required>
+                                </div>
+                                <div>
+                                    <label for="edit-customer-affiliate-code" class="form-label"><i class="fas fa-code mr-1 text-gray-500"></i> Affiliate Code</label>
+                                    <div class="flex">
+                                        <input type="text" id="edit-customer-affiliate-code" class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required>
+                                        <button type="button" id="copy-affiliate-code" class="copy-btn">Copy</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="edit-customer-balance" class="form-label"><i class="fas fa-wallet mr-1 text-gray-500"></i> Account Balance (QR)</label>
+                                    <div class="flex">
+                                        <input type="number" id="edit-customer-balance" class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" step="0.01" min="0" required>
+                                        <button type="button" id="payout-btn" class="bg-green-600 text-white px-3 py-2 rounded-r-lg hover:bg-green-700 disabled:opacity-50" disabled>Pay Out & Notify</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="edit-customer-referredby" class="form-label"><i class="fas fa-user-friends mr-1 text-gray-500"></i> Referred By</label>
+                                    <input type="text" id="edit-customer-referredby" class="w-full px-4 py-2 border rounded-lg focus:outline-none form-input" disabled>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="edit-customer-referreds" class="form-label"><i class="fas fa-users mr-1 text-gray-500"></i> Referred Customers</label>
+                                    <select id="edit-customer-referreds" multiple size="5" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input"></select>
+                                    <p class="text-xs text-gray-500 mt-1">Hold Ctrl (Cmd on Mac) to select multiple customers.</p>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="edit-customer-notes" class="form-label"><i class="fas fa-note-sticky mr-1 text-gray-500"></i> Notes</label>
+                                    <textarea id="edit-customer-notes" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input"></textarea>
+                                </div>
+                                <div class="md:col-span-2 flex justify-end space-x-3">
+                                    <button type="button" id="cancel-edit-customer" class="bg-gray-300 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-400 transition-colors">Cancel</button>
+                                    <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-save mr-2"></i> Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sales Tab -->
+                <div id="sales" class="tab-content">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Sales Management</h2>
+                        <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                            <div class="relative">
+                                <input type="text" id="sales-search" placeholder="Search sales..." class="w-64 pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Search sales">
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                            <button type="button" id="new-sale-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700" aria-label="New Sale">
+                                <i class="fas fa-plus mr-2"></i> New Sale
+                            </button>
+                        </div>
+                    </div>
+                  
+                    <div class="table-container">
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="sticky top-0 bg-white">
+                                <tr>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="date" data-order="asc">Date</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="invoice" data-order="asc">Invoice #</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="customer" data-order="asc">Customer</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700">Services</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="amount" data-order="asc">Amount</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700">Referral Code</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-table-body"></tbody>
+                        </table>
+                    </div>
+                  
+                    <div class="mt-4 flex flex-col md:flex-row justify-between items-center">
+                        <span id="sales-count" class="text-sm text-gray-600">0 sales found</span>
+                        <div class="flex space-x-2 mt-4 md:mt-0">
+                            <button id="prev-sales-page" class="px-4 py-2 border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-100" disabled aria-label="Previous page">Previous</button>
+                            <span id="sales-page-info" class="px-4 py-2 text-sm text-gray-600">Page 1 of 1</span>
+                            <button id="next-sales-page" class="px-4 py-2 border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-100" disabled aria-label="Next page">Next</button>
+                        </div>
+                    </div>
+                  
+                    <!-- New Sale Modal -->
+                    <div id="new-sale-modal" class="modal-backdrop hidden">
+                        <div class="modal-content max-w-3xl">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-800 flex items-center"><i class="fas fa-plus-circle mr-2 text-green-600"></i> New Sale</h3>
+                                <button id="close-new-sale-modal" class="text-gray-500 hover:text-gray-700" aria-label="Close modal">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <form id="new-sale-form" class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
+                                    <div class="flex space-x-6">
+                                        <label class="flex items-center text-gray-700">
+                                            <input type="radio" name="customer-type" value="existing" checked class="mr-2 focus:ring-blue-500" aria-label="Existing Customer">
+                                            Existing Customer
+                                        </label>
+                                        <label class="flex items-center text-gray-700">
+                                            <input type="radio" name="customer-type" value="new" class="mr-2 focus:ring-blue-500" aria-label="New Customer">
+                                            New Customer
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="sale-customer-code" class="block text-sm font-medium text-gray-700 mb-1">Customer Affiliate Code (from card)</label>
+                                    <input type="text" id="sale-customer-code" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Customer Affiliate Code">
+                                </div>
+                                <div id="existing-customer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="sale-customer-name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                                        <input type="text" id="sale-customer-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" readonly placeholder="Customer name will appear here..." aria-label="Customer Name">
+                                        <input type="hidden" id="sale-customer" required>
+                                    </div>
+                                </div>
+                                <div id="new-customer" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+                                    <div>
+                                        <label for="new-customer-name" class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                                        <input type="text" id="new-customer-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Full Name">
+                                    </div>
+                                    <div>
+                                        <label for="new-customer-email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                        <input type="email" id="new-customer-email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Email">
+                                    </div>
+                                    <div>
+                                        <label for="new-customer-phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                                        <input type="tel" id="new-customer-phone" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Phone Number">
+                                    </div>
+                                    <div>
+                                        <label for="new-customer-qid" class="block text-sm font-medium text-gray-700 mb-1">QID</label>
+                                        <input type="text" id="new-customer-qid" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="QID">
+                                    </div>
+                                    <div>
+                                        <label for="new-customer-vehicle-plate" class="block text-sm font-medium text-gray-700 mb-1">Vehicle Plate Number *</label>
+                                        <input type="text" id="new-customer-vehicle-plate" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Vehicle Plate Number">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="sale-date" class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                                    <input type="date" id="sale-date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" required aria-label="Date" value="${new Date().toISOString().split('T')[0]}">
+                                </div>
+                                <div>
+                                    <label for="sale-referral" class="block text-sm font-medium text-gray-700 mb-1">Referrer Code (auto-filled if referred)</label>
+                                    <input type="text" id="sale-referral" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Referrer Code">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Services</label>
+                                    <div id="sale-services-container" class="space-y-4">
+                                        <!-- Initial service row -->
+                                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 service-row" draggable="true">
+                                            <div class="md:col-span-5">
+                                                <input type="text" name="service-name" placeholder="Service description" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Description">
+                                            </div>
+                                            <div class="md:col-span-3">
+                                                <input type="number" name="service-price" placeholder="Price" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" aria-label="Service Price">
+                                            </div>
+                                            <div class="md:col-span-3">
+                                                <input type="number" name="service-quantity" placeholder="Qty" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="1" aria-label="Service Quantity">
+                                            </div>
+                                            <div class="md:col-span-1 flex items-center justify-center">
+                                                <button type="button" class="remove-service-btn text-red-500 hover:text-red-700 transition-colors" aria-label="Remove Service">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" id="add-service-btn" class="text-blue-600 text-sm hover:text-blue-800 flex items-center mt-2">
+                                        <i class="fas fa-plus mr-1"></i> Add Another Service
+                                    </button>
+                                </div>
+                                <div>
+                                    <label for="sale-discount" class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
+                                    <input type="number" id="sale-discount" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 form-input" value="0" aria-label="Discount">
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div class="text-lg font-semibold text-gray-800 flex items-center">
+                                        <i class="fas fa-calculator mr-2 text-green-600"></i> Total: <span id="sale-total" class="ml-2 text-green-600">0.00</span>
+                                    </div>
+                                    <div class="flex space-x-3">
+                                        <button type="button" id="cancel-new-sale" class="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition-colors">Cancel</button>
+                                        <button type="submit" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition-colors"><i class="fas fa-save mr-2"></i> Save Sale</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- Referral Program Tab -->
+                <div id="referrals" class="tab-content">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Referral Program</h2>
+                        <div class="relative">
+                            <input type="text" id="referrals-search" placeholder="Search referrals..." class="w-64 pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Search referrals">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="commission-rate" class="block text-sm font-medium text-gray-700 mb-1">Commission Rate (%)</label>
+                        <div class="flex">
+                            <input type="number" id="commission-rate" class="w-24 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="3" aria-label="Commission Rate">
+                            <button id="update-commission-btn" class="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700" aria-label="Update Commission Rate">Update</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="min-w-full bg-white border border-gray-200">
+                            <thead class="sticky top-0 bg-white">
+                                <tr>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="referrer" data-order="asc">Referrer</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="code" data-order="asc">Code</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="totalReferrals" data-order="asc">Total Referrals</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="totalSales" data-order="asc">Total Sales</th>
+                                    <th scope="col" class="py-3 px-4 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="commissionEarned" data-order="asc">Commission Earned</th>
+                                </tr>
+                            </thead>
+                            <tbody id="referrals-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Quick Stats</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
+                                <div class="text-gray-500 text-sm">Total Referrals</div>
+                                <div id="total-referrals-stat" class="text-xl font-bold text-gray-800">0</div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
+                                <div class="text-gray-500 text-sm">Revenue From Referrals</div>
+                                <div id="revenue-referrals-stat" class="text-xl font-bold text-gray-800">QR 0</div>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow border border-gray-200">
+                                <div class="text-gray-500 text-sm">Commission Paid</div>
+                                <div id="commission-paid-stat" class="text-xl font-bold text-gray-800">QR 0</div>
+                            </div>
+                        </div>
+                    </div>
+                    <section class="bg-white rounded-xl shadow-lg p-6 mb-8 mt-6">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 space-y-4 md:space-y-0">
+                            <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                                <i class="fas fa-key mr-3 text-accent"></i> Affiliate Codes
+                            </h2>
+                            <div class="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-2 md:space-y-0">
+                                <button id="generate-single-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                    <i class="fas fa-plus mr-2"></i> Generate New Code
+                                </button>
+                                <button id="generate-codes-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                    <i class="fas fa-plus-circle mr-2"></i> Generate 100 Codes
+                                </button>
+                                <button id="copy-all-today-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center disabled:opacity-50"
+                                    aria-label="Copy all affiliate codes generated today" type="button">
+                                    <i class="fas fa-copy mr-2"></i> Copy All Today's Codes
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-4 flex flex-col md:flex-row md:items-center md:space-x-4 space-y-2 md:space-y-0">
+                            <div class="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-2 md:space-y-0 flex-grow">
+                                <input type="text" id="search-codes" placeholder="Search codes..." class="flex-grow px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Search affiliate codes">
+                                <button id="search-btn" class="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg" aria-label="Search">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-2 md:space-y-0">
+                                <label for="filter-date-from" class="text-sm text-gray-600 mr-2 md:mr-0">Filter by creation date:</label>
+                                <input type="date" id="filter-date-from" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Filter from date">
+                                <span class="mx-2 text-gray-500 hidden md:inline">to</span>
+                                <input type="date" id="filter-date-to" class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Filter to date">
+                                <button id="clear-date-filter-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg ml-2" type="button" aria-label="Clear date filter">
+                                    Clear Filter
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                                <thead class="bg-white">
+                                    <tr>
+                                        <th class="py-3 px-4 text-left text-gray-600 font-semibold">#</th>
+                                        <th class="py-3 px-4 text-left text-gray-600 font-semibold">Code</th>
+                                        <th class="py-3 px-4 text-left text-gray-600 font-semibold">Status</th>
+                                        <th class="py-3 px-4 text-left text-gray-600 font-semibold">Used In Sales</th>
+                                        <th class="py-3 px-4 text-left text-gray-600 font-semibold">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="codes-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                        <div class="flex justify-between items-center mt-4">
+                            <div>
+                                <span id="codes-count" class="text-gray-600">0 codes available</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button id="first-page" class="px-3 py-1 bg-white rounded hover:bg-gray-100 disabled:opacity-50" aria-label="First page">
+                                    <i class="fas fa-angles-left"></i>
+                                </button>
+                                <button id="prev-page" class="px-3 py-1 bg-white rounded hover:bg-gray-100 disabled:opacity-50" aria-label="Previous page">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <span id="page-info" class="px-3 py-1">Page 1 of 1</span>
+                                <button id="next-page" class="px-3 py-1 bg-white rounded hover:bg-gray-100 disabled:opacity-50" aria-label="Next page">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <button id="last-page" class="px-3 py-1 bg-white rounded hover:bg-gray-100 disabled:opacity-50" aria-label="Last page">
+                                    <i class="fas fa-angles-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Affiliate Code Statistics</h3>
+                        <canvas id="affiliate-chart" style="max-height: 400px;"></canvas>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="js/script.js"></script>
+</body>
+</html>
