@@ -48,6 +48,31 @@ function showAlert(message) {
     }, 3000);
 }
 
+// Sample Data (moved outside DOMContentLoaded so it's available globally)
+const sampleCustomers = [
+    { id: 1, name: 'Ahmed Mohamed', email: 'ahmed@example.com', phone: '555123456', qid: '123456789012', vehiclePlate: 'ABC-1234', affiliateCode: 'AFF1234', referredBy: null, referredCustomers: [2, 3, 4], accountBalance: 120.00, notes: 'Loyal customer' },
+    { id: 2, name: 'Fatima Ali', email: 'fatima@example.com', phone: '555987654', qid: '987654321098', vehiclePlate: 'XYZ-5678', affiliateCode: 'AFF5678', referredBy: 'AFF1234', referredCustomers: [], accountBalance: 50.00, notes: '' },
+    { id: 3, name: 'Mohammed Hassan', email: 'mohammed@example.com', phone: '555456123', qid: '456123789045', vehiclePlate: 'DEF-9012', affiliateCode: 'AFF9012', referredBy: 'AFF1234', referredCustomers: [5], accountBalance: 280.00, notes: 'High spender' },
+    { id: 4, name: 'Mariam Abdullah', email: 'mariam@example.com', phone: '555789456', qid: '789456123078', vehiclePlate: 'GHI-3456', affiliateCode: 'AFF3456', referredBy: 'AFF1234', referredCustomers: [], accountBalance: 90.00, notes: '' },
+    { id: 5, name: 'Khalid Ibrahim', email: 'khalid@example.com', phone: '555321789', qid: '321789654032', vehiclePlate: 'JKL-7890', affiliateCode: 'AFF7890', referredBy: 'AFF9012', referredCustomers: [], accountBalance: 0.00, notes: '' }
+];
+
+const sampleSales = [
+    { id: 1, date: '2023-05-15', invoice: 'INV-001', customer: 'Ahmed Mohamed', customerId: 1, services: 'Oil Change, AC Service', servicesList: [{ name: 'Oil Change', price: 120, quantity: 1 }, { name: 'AC Service', price: 200, quantity: 1 }], amount: 'QR 320', referral: 'AFF7890', commission: 'QR 9.60', discount: 0 },
+    { id: 2, date: '2023-05-16', invoice: 'INV-002', customer: 'Fatima Ali', customerId: 2, services: 'Tire Rotation, Brake Check', servicesList: [{ name: 'Tire Rotation', price: 150, quantity: 1 }, { name: 'Brake Check', price: 300, quantity: 1 }], amount: 'QR 450', referral: null, commission: null, discount: 0 },
+    { id: 3, date: '2023-05-17', invoice: 'INV-003', customer: 'Mohammed Hassan', customerId: 3, services: 'Full Service', servicesList: [{ name: 'Full Service', price: 800, quantity: 1 }], amount: 'QR 800', referral: 'AFF1234', commission: 'QR 24.00', discount: 0 },
+    { id: 4, date: '2023-05-18', invoice: 'INV-004', customer: 'Mariam Abdullah', customerId: 4, services: 'Wheel Alignment', servicesList: [{ name: 'Wheel Alignment', price: 150, quantity: 1 }], amount: 'QR 150', referral: null, commission: null, discount: 0 },
+    { id: 5, date: '2023-05-19', invoice: 'INV-005', customer: 'Khalid Ibrahim', customerId: 5, services: 'Battery Replacement', servicesList: [{ name: 'Battery Replacement', price: 280, quantity: 1 }], amount: 'QR 280', referral: 'AFF3456', commission: 'QR 8.40', discount: 0 }
+];
+
+const sampleReferrals = [
+    { id: 1, referrer: 'Ahmed Mohamed', code: 'AFF1234', totalReferrals: 3, referredCustomers: [2, 3, 4], totalSales: 'QR 1400.00', commissionEarned: 'QR 42.00', status: 'Pending' },
+    { id: 2, referrer: 'Fatima Ali', code: 'AFF5678', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 450.00', commissionEarned: 'QR 0.00', status: 'N/A' },
+    { id: 3, referrer: 'Mohammed Hassan', code: 'AFF9012', totalReferrals: 1, referredCustomers: [5], totalSales: 'QR 800.00', commissionEarned: 'QR 24.00', status: 'Paid' },
+    { id: 4, referrer: 'Mariam Abdullah', code: 'AFF3456', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 150.00', commissionEarned: 'QR 4.50', status: 'Pending' },
+    { id: 5, referrer: 'Khalid Ibrahim', code: 'AFF7890', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 280.00', commissionEarned: 'QR 0.00', status: 'N/A' }
+];
+
 // Move loadDataFromFirestore outside of DOMContentLoaded so it can be called from auth.onAuthStateChanged
 function loadDataFromFirestore() {
     // Load customers
@@ -251,29 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     // Sample Data (as fallback if Firestore is empty)
-    const sampleCustomers = [
-        { id: 1, name: 'Ahmed Mohamed', email: 'ahmed@example.com', phone: '555123456', qid: '123456789012', vehiclePlate: 'ABC-1234', affiliateCode: 'AFF1234', referredBy: null, referredCustomers: [2, 3, 4], accountBalance: 120.00, notes: 'Loyal customer' },
-        { id: 2, name: 'Fatima Ali', email: 'fatima@example.com', phone: '555987654', qid: '987654321098', vehiclePlate: 'XYZ-5678', affiliateCode: 'AFF5678', referredBy: 'AFF1234', referredCustomers: [], accountBalance: 50.00, notes: '' },
-        { id: 3, name: 'Mohammed Hassan', email: 'mohammed@example.com', phone: '555456123', qid: '456123789045', vehiclePlate: 'DEF-9012', affiliateCode: 'AFF9012', referredBy: 'AFF1234', referredCustomers: [5], accountBalance: 280.00, notes: 'High spender' },
-        { id: 4, name: 'Mariam Abdullah', email: 'mariam@example.com', phone: '555789456', qid: '789456123078', vehiclePlate: 'GHI-3456', affiliateCode: 'AFF3456', referredBy: 'AFF1234', referredCustomers: [], accountBalance: 90.00, notes: '' },
-        { id: 5, name: 'Khalid Ibrahim', email: 'khalid@example.com', phone: '555321789', qid: '321789654032', vehiclePlate: 'JKL-7890', affiliateCode: 'AFF7890', referredBy: 'AFF9012', referredCustomers: [], accountBalance: 0.00, notes: '' }
-    ];
-
-    const sampleSales = [
-        { id: 1, date: '2023-05-15', invoice: 'INV-001', customer: 'Ahmed Mohamed', customerId: 1, services: 'Oil Change, AC Service', servicesList: [{ name: 'Oil Change', price: 120, quantity: 1 }, { name: 'AC Service', price: 200, quantity: 1 }], amount: 'QR 320', referral: 'AFF7890', commission: 'QR 9.60', discount: 0 },
-        { id: 2, date: '2023-05-16', invoice: 'INV-002', customer: 'Fatima Ali', customerId: 2, services: 'Tire Rotation, Brake Check', servicesList: [{ name: 'Tire Rotation', price: 150, quantity: 1 }, { name: 'Brake Check', price: 300, quantity: 1 }], amount: 'QR 450', referral: null, commission: null, discount: 0 },
-        { id: 3, date: '2023-05-17', invoice: 'INV-003', customer: 'Mohammed Hassan', customerId: 3, services: 'Full Service', servicesList: [{ name: 'Full Service', price: 800, quantity: 1 }], amount: 'QR 800', referral: 'AFF1234', commission: 'QR 24.00', discount: 0 },
-        { id: 4, date: '2023-05-18', invoice: 'INV-004', customer: 'Mariam Abdullah', customerId: 4, services: 'Wheel Alignment', servicesList: [{ name: 'Wheel Alignment', price: 150, quantity: 1 }], amount: 'QR 150', referral: null, commission: null, discount: 0 },
-        { id: 5, date: '2023-05-19', invoice: 'INV-005', customer: 'Khalid Ibrahim', customerId: 5, services: 'Battery Replacement', servicesList: [{ name: 'Battery Replacement', price: 280, quantity: 1 }], amount: 'QR 280', referral: 'AFF3456', commission: 'QR 8.40', discount: 0 }
-    ];
-
-    const sampleReferrals = [
-        { id: 1, referrer: 'Ahmed Mohamed', code: 'AFF1234', totalReferrals: 3, referredCustomers: [2, 3, 4], totalSales: 'QR 1400.00', commissionEarned: 'QR 42.00', status: 'Pending' },
-        { id: 2, referrer: 'Fatima Ali', code: 'AFF5678', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 450.00', commissionEarned: 'QR 0.00', status: 'N/A' },
-        { id: 3, referrer: 'Mohammed Hassan', code: 'AFF9012', totalReferrals: 1, referredCustomers: [5], totalSales: 'QR 800.00', commissionEarned: 'QR 24.00', status: 'Paid' },
-        { id: 4, referrer: 'Mariam Abdullah', code: 'AFF3456', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 150.00', commissionEarned: 'QR 4.50', status: 'Pending' },
-        { id: 5, referrer: 'Khalid Ibrahim', code: 'AFF7890', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 280.00', commissionEarned: 'QR 0.00', status: 'N/A' }
-    ];
+    // sampleCustomers, sampleSales, and sampleReferrals are now defined globally above
 
     let customers = [];
     let sales = [];
