@@ -939,9 +939,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const newSaleForm = document.getElementById('new-sale-form');
     if (newSaleForm) {
-        newSaleForm.addEventListener('submit', function(e) {
+        newSaleForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            saveNewSale();
+            e.stopPropagation();
+            try {
+                await saveNewSale();
+            } catch (error) {
+                console.error('Error saving sale:', error);
+                showAlert('Error saving sale. Please try again.', 'error');
+            }
+        });
+    }
+
+    // Also handle the save sale button directly as a fallback
+    const saveNewSaleBtn = document.getElementById('save-new-sale');
+    if (saveNewSaleBtn) {
+        saveNewSaleBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                await saveNewSale();
+            } catch (error) {
+                console.error('Error saving sale:', error);
+                showAlert('Error saving sale. Please try again.', 'error');
+            }
         });
     }
 
@@ -1434,63 +1455,122 @@ async function addNewCustomer() {
     }
 }
 
-function saveNewSale() {
-    const customerType = document.querySelector('input[name="customer-type"]:checked').value;
-    let customerId, customerName;
-    
-    if (customerType === 'existing') {
-        customerId = parseInt(document.getElementById('sale-customer').value);
-        customerName = document.getElementById('sale-customer-name').value;
+async function saveNewSale() {
+    try {
+        console.log('saveNewSale function called'); // Debug log
         
-        if (!customerId || !customerName) {
-            showAlert('Please select a valid customer or enter a valid affiliate code.');
+        const customerType = document.querySelector('input[name="customer-type"]:checked');
+        if (!customerType) {
+            showAlert('Please select a customer type.', 'error');
             return;
         }
-    } else {
-        // Create new customer
-        const newCustomer = {
-            id: Math.max(...customers.map(c => c.id), 0) + 1,
-            name: sanitizeInput(document.getElementById('new-customer-name').value),
-            email: sanitizeInput(document.getElementById('new-customer-email').value),
-            phone: sanitizeInput(document.getElementById('new-customer-phone').value),
-            qid: sanitizeInput(document.getElementById('new-customer-qid').value),
-            vehiclePlate: sanitizeInput(document.getElementById('new-customer-vehicle-plate').value),
-            affiliateCode: 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-            referredBy: sanitizeInput(document.getElementById('sale-referral').value) || null,
-            referredCustomers: [],
-            accountBalance: 0,
-            notes: ''
+        
+        let customerId, customerName;
+        
+        if (customerType.value === 'existing') {
+            const customerCodeInput = document.getElementById('sale-customer-code');
+            const customerNameInput = document.getElementById('sale-customer-name');
+            
+            if (!customerCodeInput || !customerNameInput) {
+                showAlert('Customer form elements not found.', 'error');
+                return;
+            }
+            
+            const customerCode = customerCodeInput.value.trim();
+            customerName = customerNameInput.value.trim();
+            
+            if (!customerCode || !customerName || customerName === 'Customer not found') {
+                showAlert('Please enter a valid customer affiliate code.', 'error');
+                return;
+            }
+            
+            // Find customer by affiliate code
+            const customer = customers.find(c => 
+                c.affiliateCode && c.affiliateCode.toLowerCase().includes(customerCode.toLowerCase())
+            );
+            
+            if (!customer) {
+                showAlert('Customer not found. Please check the affiliate code.', 'error');
+                return;
+            }
+            
+            customerId = customer.id;
+            customerName = customer.name;
+        } else {
+            // Create new customer
+            const newCustomerName = document.getElementById('new-customer-name');
+            const newCustomerPhone = document.getElementById('new-customer-phone');
+            const newCustomerVehiclePlate = document.getElementById('new-customer-vehicle-plate');
+            
+            if (!newCustomerName || !newCustomerPhone || !newCustomerVehiclePlate) {
+                showAlert('New customer form elements not found.', 'error');
+                return;
+            }
+            
+            const name = sanitizeInput(newCustomerName.value);
+            const phone = sanitizeInput(newCustomerPhone.value);
+            const vehiclePlate = sanitizeInput(newCustomerVehiclePlate.value);
+            
+            if (!name || !phone || !vehiclePlate) {
+                showAlert('Please fill in all required fields for the new customer (Name, Phone, Vehicle Plate).', 'error');
+                return;
+            }
+            
+            const newCustomer = {
+                id: Math.max(...customers.map(c => c.id), 0) + 1,
+                name: name,
+                email: sanitizeInput(document.getElementById('new-customer-email').value),
+                phone: phone,
+                qid: sanitizeInput(document.getElementById('new-customer-qid').value),
+                vehiclePlate: vehiclePlate,
+                affiliateCode: 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                referredBy: sanitizeInput(document.getElementById('sale-referral').value) || null,
+                referredCustomers: [],
+                accountBalance: 0,
+                notes: ''
+            };
+            
+            customers.push(newCustomer);
+            customerId = newCustomer.id;
+            customerName = newCustomer.name;
+        }
+        
+        // Validate required fields
+        const saleDateInput = document.getElementById('sale-date');
+        if (!saleDateInput || !saleDateInput.value) {
+            showAlert('Please select a sale date.', 'error');
+            return;
+        }
+        
+        // Create new sale
+        const newSale = {
+            id: Math.max(...sales.map(s => s.id), 0) + 1,
+            date: saleDateInput.value,
+            invoice: 'INV-' + String(Math.max(...sales.map(s => s.id), 0) + 1).padStart(3, '0'),
+            customer: customerName,
+            customerId: customerId,
+            services: 'Service Details', // This would be populated from service rows
+            servicesList: [], // This would be populated from service rows
+            amount: 'QR 0', // This would be calculated from service rows
+            referral: sanitizeInput(document.getElementById('sale-referral').value) || null,
+            commission: null, // Calculate based on referral
+            discount: parseFloat(document.getElementById('sale-discount').value) || 0
         };
         
-        customers.push(newCustomer);
-        customerId = newCustomer.id;
-        customerName = newCustomer.name;
+        sales.push(newSale);
+        saveDataToFirestore();
+        renderSalesTable();
+        renderCustomerTable();
+        hideModal('new-sale-modal');
+        showAlert('New sale created successfully!');
+        
+        // Reset form
+        document.getElementById('new-sale-form').reset();
+        
+    } catch (error) {
+        console.error('Error in saveNewSale:', error);
+        showAlert('An error occurred while saving the sale. Please try again.', 'error');
     }
-    
-    // Create new sale
-    const newSale = {
-        id: Math.max(...sales.map(s => s.id), 0) + 1,
-        date: document.getElementById('sale-date').value,
-        invoice: 'INV-' + String(Math.max(...sales.map(s => s.id), 0) + 1).padStart(3, '0'),
-        customer: customerName,
-        customerId: customerId,
-        services: 'Service Details', // This would be populated from service rows
-        servicesList: [], // This would be populated from service rows
-        amount: 'QR 0', // This would be calculated from service rows
-        referral: sanitizeInput(document.getElementById('sale-referral').value) || null,
-        commission: null, // Calculate based on referral
-        discount: parseFloat(document.getElementById('sale-discount').value) || 0
-    };
-    
-    sales.push(newSale);
-    saveDataToFirestore();
-    renderSalesTable();
-    renderCustomerTable();
-    hideModal('new-sale-modal');
-    showAlert('New sale created successfully!');
-    
-    // Reset form
-    document.getElementById('new-sale-form').reset();
 }
 
 function saveEditedSale() {
