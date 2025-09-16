@@ -1259,7 +1259,18 @@ function populateEditCustomerModal(customer) {
     document.getElementById('edit-customer-vehicle-plate').value = customer.vehiclePlate || '';
     document.getElementById('edit-customer-affiliate-code').value = customer.affiliateCode || '';
     document.getElementById('edit-customer-balance').value = customer.accountBalance || 0;
-    document.getElementById('edit-customer-referredby').value = customer.referredBy || '';
+    
+    // Find and display the referrer's name (not the affiliate code)
+    let referrerInfo = '';
+    if (customer.referredBy) {
+        const referrer = customers.find(c => c.affiliateCode === customer.referredBy);
+        if (referrer) {
+            referrerInfo = `${referrer.name} (${customer.referredBy})`;
+        } else {
+            referrerInfo = `Code: ${customer.referredBy} (Customer not found)`;
+        }
+    }
+    document.getElementById('edit-customer-referredby').value = referrerInfo;
     document.getElementById('edit-customer-notes').value = customer.notes || '';
     
     // Populate referred customers select
