@@ -133,6 +133,9 @@ function renderCustomerTable(data = customers, page = 1) {
         customerTableBody.appendChild(row);
     });
 
+    // Add event listeners for customer action buttons
+    attachCustomerButtonListeners();
+
     // Update pagination info if elements exist
     const customerCount = document.getElementById('customer-count');
     const customerPageInfo = document.getElementById('customer-page-info');
@@ -182,6 +185,9 @@ function renderSalesTable(data = sales, page = 1) {
         `;
         salesTableBody.appendChild(row);
     });
+
+    // Add event listeners for sales action buttons
+    attachSalesButtonListeners();
 
     // Update pagination info if elements exist
     const salesCount = document.getElementById('sales-count');
@@ -809,6 +815,99 @@ document.addEventListener('DOMContentLoaded', function() {
             copyAllTodayCodes();
         });
     }
+
+    // Main action buttons
+    const newSaleBtn = document.getElementById('new-sale-btn');
+    if (newSaleBtn) {
+        newSaleBtn.addEventListener('click', function() {
+            showModal('new-sale-modal');
+        });
+    }
+
+    const updateCommissionBtn = document.getElementById('update-commission-btn');
+    if (updateCommissionBtn) {
+        updateCommissionBtn.addEventListener('click', function() {
+            const newRate = parseFloat(document.getElementById('commission-rate').value);
+            if (newRate >= 0 && newRate <= 100) {
+                commissionRate = newRate;
+                saveDataToFirestore();
+                showAlert('Commission rate updated successfully!');
+            } else {
+                showAlert('Please enter a valid commission rate (0-100)');
+            }
+        });
+    }
+
+    // Modal close buttons
+    document.querySelectorAll('.modal-close, #cancel-edit-customer, #cancel-referred-customers, #cancel-new-sale, #cancel-edit-sale').forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal-backdrop');
+            if (modal) {
+                hideModal(modal.id);
+            }
+        });
+    });
+
+    // Form submissions
+    const editCustomerForm = document.getElementById('edit-customer-form');
+    if (editCustomerForm) {
+        editCustomerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveCustomerChanges();
+        });
+    }
+
+    const newSaleForm = document.getElementById('new-sale-form');
+    if (newSaleForm) {
+        newSaleForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveNewSale();
+        });
+    }
+
+    const editSaleForm = document.getElementById('edit-sale-form');
+    if (editSaleForm) {
+        editSaleForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveEditedSale();
+        });
+    }
+
+    // Customer type radio buttons in new sale modal
+    const customerTypeRadios = document.querySelectorAll('input[name="customer-type"]');
+    customerTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const existingCustomerDiv = document.getElementById('existing-customer');
+            const newCustomerDiv = document.getElementById('new-customer');
+            
+            if (this.value === 'existing') {
+                existingCustomerDiv.classList.remove('hidden');
+                newCustomerDiv.classList.add('hidden');
+            } else {
+                existingCustomerDiv.classList.add('hidden');
+                newCustomerDiv.classList.remove('hidden');
+            }
+        });
+    });
+
+    // Customer affiliate code lookup in new sale modal
+    const saleCustomerCode = document.getElementById('sale-customer-code');
+    if (saleCustomerCode) {
+        saleCustomerCode.addEventListener('input', function() {
+            const code = this.value.trim();
+            if (code) {
+                const customer = customers.find(c => c.affiliateCode === code);
+                if (customer) {
+                    document.getElementById('sale-customer-name').value = customer.name;
+                    document.getElementById('sale-customer').value = customer.id;
+                    document.getElementById('sale-referral').value = customer.referredBy || '';
+                } else {
+                    document.getElementById('sale-customer-name').value = '';
+                    document.getElementById('sale-customer').value = '';
+                }
+            }
+        });
+    }
 });
 
 // Generate a single new affiliate code
@@ -934,4 +1033,326 @@ function saveDataToFirestore() {
 
     // Save commission rate
     db.collection('settings').doc('commission').set({ rate: commissionRate });
+}
+
+// Customer button event listeners
+function attachCustomerButtonListeners() {
+    // Edit customer buttons
+    document.querySelectorAll('.edit-customer-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const customerId = parseInt(this.getAttribute('data-customer-id'));
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                populateEditCustomerModal(customer);
+                showModal('edit-customer-modal');
+            }
+        });
+    });
+
+    // Delete customer buttons
+    document.querySelectorAll('.delete-customer-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const customerId = parseInt(this.getAttribute('data-customer-id'));
+            if (confirm('Are you sure you want to delete this customer?')) {
+                deleteCustomer(customerId);
+            }
+        });
+    });
+
+    // View referred customers buttons
+    document.querySelectorAll('.view-referred-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const customerId = parseInt(this.getAttribute('data-customer-id'));
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                showReferredCustomers(customer);
+            }
+        });
+    });
+}
+
+// Sales button event listeners
+function attachSalesButtonListeners() {
+    // Edit sale buttons
+    document.querySelectorAll('.edit-sale-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const saleId = parseInt(this.getAttribute('data-sale-id'));
+            const sale = sales.find(s => s.id === saleId);
+            if (sale) {
+                populateEditSaleModal(sale);
+                showModal('edit-sale-modal');
+            }
+        });
+    });
+
+    // Delete sale buttons
+    document.querySelectorAll('.delete-sale-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const saleId = parseInt(this.getAttribute('data-sale-id'));
+            if (confirm('Are you sure you want to delete this sale?')) {
+                deleteSale(saleId);
+            }
+        });
+    });
+
+    // Generate invoice buttons
+    document.querySelectorAll('.generate-invoice-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const saleId = parseInt(this.getAttribute('data-sale-id'));
+            generateInvoice(saleId);
+        });
+    });
+}
+
+// Customer-related functions
+function populateEditCustomerModal(customer) {
+    document.getElementById('edit-customer-id').value = customer.id;
+    document.getElementById('edit-customer-name').value = customer.name || '';
+    document.getElementById('edit-customer-email').value = customer.email || '';
+    document.getElementById('edit-customer-phone').value = customer.phone || '';
+    document.getElementById('edit-customer-qid').value = customer.qid || '';
+    document.getElementById('edit-customer-vehicle-plate').value = customer.vehiclePlate || '';
+    document.getElementById('edit-customer-affiliate-code').value = customer.affiliateCode || '';
+    document.getElementById('edit-customer-balance').value = customer.accountBalance || 0;
+    document.getElementById('edit-customer-referredby').value = customer.referredBy || '';
+    document.getElementById('edit-customer-notes').value = customer.notes || '';
+    
+    // Populate referred customers select
+    const referredSelect = document.getElementById('edit-customer-referreds');
+    referredSelect.innerHTML = '';
+    customers.forEach(c => {
+        if (c.id !== customer.id) {
+            const option = document.createElement('option');
+            option.value = c.id;
+            option.textContent = c.name;
+            option.selected = customer.referredCustomers && customer.referredCustomers.includes(c.id);
+            referredSelect.appendChild(option);
+        }
+    });
+}
+
+function deleteCustomer(customerId) {
+    const index = customers.findIndex(c => c.id === customerId);
+    if (index !== -1) {
+        customers.splice(index, 1);
+        saveDataToFirestore();
+        renderCustomerTable();
+        showAlert('Customer deleted successfully!');
+    }
+}
+
+function showReferredCustomers(customer) {
+    const referredCustomersData = customers.filter(c => customer.referredCustomers.includes(c.id));
+    const tableBody = document.getElementById('referred-customers-table-body');
+    const countElement = document.getElementById('referred-customers-count');
+    
+    tableBody.innerHTML = '';
+    
+    if (referredCustomersData.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">No referred customers found</td></tr>';
+    } else {
+        referredCustomersData.forEach(refCustomer => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="py-3 px-4 text-sm">${refCustomer.name}</td>
+                <td class="py-3 px-4 text-sm hidden md:table-cell">${refCustomer.email || 'N/A'}</td>
+                <td class="py-3 px-4 text-sm">${refCustomer.phone}</td>
+                <td class="py-3 px-4 text-sm hidden md:table-cell">${refCustomer.qid || 'N/A'}</td>
+                <td class="py-3 px-4 text-sm">${refCustomer.vehiclePlate || 'N/A'}</td>
+                <td class="py-3 px-4 text-sm">${refCustomer.affiliateCode || 'N/A'}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+    
+    countElement.textContent = `${referredCustomersData.length} referred customers found`;
+    showModal('referred-customers-modal');
+}
+
+// Sales-related functions
+function populateEditSaleModal(sale) {
+    document.getElementById('edit-sale-id').value = sale.id;
+    document.getElementById('edit-customer-name').value = sale.customer || '';
+    document.getElementById('edit-customer-phone').value = sale.customerPhone || '';
+    document.getElementById('edit-product-name').value = sale.services || '';
+    document.getElementById('edit-sale-amount').value = parseFloat(sale.amount.replace('QR ', '')) || 0;
+    document.getElementById('edit-affiliate-code').value = sale.referral || '';
+    document.getElementById('edit-sale-date').value = sale.date || '';
+    document.getElementById('edit-notes').value = sale.notes || '';
+    document.getElementById('edit-sale-discount').value = sale.discount || 0;
+    
+    // Update total
+    updateEditSaleTotal();
+}
+
+function deleteSale(saleId) {
+    const index = sales.findIndex(s => s.id === saleId);
+    if (index !== -1) {
+        sales.splice(index, 1);
+        saveDataToFirestore();
+        renderSalesTable();
+        showAlert('Sale deleted successfully!');
+    }
+}
+
+function generateInvoice(saleId) {
+    const sale = sales.find(s => s.id === saleId);
+    if (sale) {
+        showAlert(`Invoice generated for ${sale.customer} - ${sale.invoice}`);
+        // Here you would implement actual invoice generation logic
+    }
+}
+
+function updateEditSaleTotal() {
+    const amount = parseFloat(document.getElementById('edit-sale-amount').value) || 0;
+    const discount = parseFloat(document.getElementById('edit-sale-discount').value) || 0;
+    const total = amount - discount;
+    document.getElementById('edit-sale-total').textContent = total.toFixed(2);
+}
+
+// Form submission functions
+function saveCustomerChanges() {
+    const customerId = parseInt(document.getElementById('edit-customer-id').value);
+    const customerIndex = customers.findIndex(c => c.id === customerId);
+    
+    if (customerIndex !== -1) {
+        const customer = customers[customerIndex];
+        customer.name = sanitizeInput(document.getElementById('edit-customer-name').value);
+        customer.email = sanitizeInput(document.getElementById('edit-customer-email').value);
+        customer.phone = sanitizeInput(document.getElementById('edit-customer-phone').value);
+        customer.qid = sanitizeInput(document.getElementById('edit-customer-qid').value);
+        customer.vehiclePlate = sanitizeInput(document.getElementById('edit-customer-vehicle-plate').value);
+        customer.affiliateCode = sanitizeInput(document.getElementById('edit-customer-affiliate-code').value);
+        customer.accountBalance = parseFloat(document.getElementById('edit-customer-balance').value) || 0;
+        customer.notes = sanitizeInput(document.getElementById('edit-customer-notes').value);
+        
+        // Update referred customers
+        const referredSelect = document.getElementById('edit-customer-referreds');
+        customer.referredCustomers = Array.from(referredSelect.selectedOptions).map(option => parseInt(option.value));
+        
+        saveDataToFirestore();
+        renderCustomerTable();
+        hideModal('edit-customer-modal');
+        showAlert('Customer updated successfully!');
+    }
+}
+
+function saveNewSale() {
+    const customerType = document.querySelector('input[name="customer-type"]:checked').value;
+    let customerId, customerName;
+    
+    if (customerType === 'existing') {
+        customerId = parseInt(document.getElementById('sale-customer').value);
+        customerName = document.getElementById('sale-customer-name').value;
+        
+        if (!customerId || !customerName) {
+            showAlert('Please select a valid customer or enter a valid affiliate code.');
+            return;
+        }
+    } else {
+        // Create new customer
+        const newCustomer = {
+            id: Math.max(...customers.map(c => c.id), 0) + 1,
+            name: sanitizeInput(document.getElementById('new-customer-name').value),
+            email: sanitizeInput(document.getElementById('new-customer-email').value),
+            phone: sanitizeInput(document.getElementById('new-customer-phone').value),
+            qid: sanitizeInput(document.getElementById('new-customer-qid').value),
+            vehiclePlate: sanitizeInput(document.getElementById('new-customer-vehicle-plate').value),
+            affiliateCode: 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+            referredBy: sanitizeInput(document.getElementById('sale-referral').value) || null,
+            referredCustomers: [],
+            accountBalance: 0,
+            notes: ''
+        };
+        
+        customers.push(newCustomer);
+        customerId = newCustomer.id;
+        customerName = newCustomer.name;
+    }
+    
+    // Create new sale
+    const newSale = {
+        id: Math.max(...sales.map(s => s.id), 0) + 1,
+        date: document.getElementById('sale-date').value,
+        invoice: 'INV-' + String(Math.max(...sales.map(s => s.id), 0) + 1).padStart(3, '0'),
+        customer: customerName,
+        customerId: customerId,
+        services: 'Service Details', // This would be populated from service rows
+        servicesList: [], // This would be populated from service rows
+        amount: 'QR 0', // This would be calculated from service rows
+        referral: sanitizeInput(document.getElementById('sale-referral').value) || null,
+        commission: null, // Calculate based on referral
+        discount: parseFloat(document.getElementById('sale-discount').value) || 0
+    };
+    
+    sales.push(newSale);
+    saveDataToFirestore();
+    renderSalesTable();
+    renderCustomerTable();
+    hideModal('new-sale-modal');
+    showAlert('New sale created successfully!');
+    
+    // Reset form
+    document.getElementById('new-sale-form').reset();
+}
+
+function saveEditedSale() {
+    const saleId = parseInt(document.getElementById('edit-sale-id').value);
+    const saleIndex = sales.findIndex(s => s.id === saleId);
+    
+    if (saleIndex !== -1) {
+        const sale = sales[saleIndex];
+        sale.customer = sanitizeInput(document.getElementById('edit-customer-name').value);
+        sale.services = sanitizeInput(document.getElementById('edit-product-name').value);
+        sale.amount = 'QR ' + (parseFloat(document.getElementById('edit-sale-amount').value) || 0).toFixed(2);
+        sale.referral = sanitizeInput(document.getElementById('edit-affiliate-code').value) || null;
+        sale.date = document.getElementById('edit-sale-date').value;
+        sale.discount = parseFloat(document.getElementById('edit-sale-discount').value) || 0;
+        sale.notes = sanitizeInput(document.getElementById('edit-notes').value);
+        
+        saveDataToFirestore();
+        renderSalesTable();
+        hideModal('edit-sale-modal');
+        showAlert('Sale updated successfully!');
+    }
+}
+
+function lookupCustomerByAffiliate() {
+    const affiliateCode = document.getElementById('sale-customer').value.trim();
+    
+    if (!affiliateCode) {
+        document.getElementById('sale-customer-name').value = '';
+        return;
+    }
+    
+    const customer = customers.find(c => c.affiliateCode && c.affiliateCode.toLowerCase() === affiliateCode.toLowerCase());
+    
+    if (customer) {
+        document.getElementById('sale-customer-name').value = customer.name;
+        document.getElementById('sale-customer').value = customer.id;
+    } else {
+        document.getElementById('sale-customer-name').value = 'Customer not found';
+        document.getElementById('sale-customer').value = '';
+    }
+}
+
+// Utility functions
+function sanitizeInput(input) {
+    if (typeof input !== 'string') return '';
+    return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').trim();
+}
+
+function showAlert(message, type = 'success') {
+    // Create a simple alert div that auto-dismisses
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`;
+    alertDiv.textContent = message;
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 3000);
 }
