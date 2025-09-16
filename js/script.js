@@ -224,7 +224,7 @@ function renderCodesTable() {
     const codesTableBody = document.getElementById('codes-table-body');
     if (!codesTableBody) return; // Guard clause for when DOM isn't ready
 
-    const codes = filteredCodes ? filteredCodes() : affiliateCodes;
+    const codes = filteredCodes();
     const startIndex = (currentPage - 1) * codesPerPage;
     const endIndex = startIndex + codesPerPage;
     const paginatedCodes = codes.slice(startIndex, endIndex);
@@ -234,37 +234,73 @@ function renderCodesTable() {
     updateCopyAllTodayBtn();
 
     if (paginatedCodes.length === 0) {
+        const isSearching = searchTerm && searchTerm.length > 0;
+        const isFiltering = filterDateRange.from || filterDateRange.to;
+        
+        let message = '';
+        if (isSearching && isFiltering) {
+            message = `No codes found matching "${searchTerm}" within the selected date range.`;
+        } else if (isSearching) {
+            message = `No codes found matching "${searchTerm}". Try a different search term.`;
+        } else if (isFiltering) {
+            message = 'No codes found for the selected date range. Try adjusting the dates.';
+        } else {
+            message = 'No affiliate codes available. Generate some codes to get started.';
+        }
+        
         codesTableBody.innerHTML = `
             <tr>
-                <td colspan="5" class="py-4 text-center text-gray-500">
-                    ${codes.length === 0
-                        ? (filterDateRange.from !== getTodayStr() || filterDateRange.to !== getTodayStr()
-                            ? 'No codes found for the selected date(s). Generate new ones or try another date.'
-                            : 'No affiliate codes available. Generate some codes to get started.')
-                        : 'No codes found matching your search'}
+                <td colspan="5" class="py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center space-y-2">
+                        <i class="fas fa-search text-gray-300 text-2xl mb-2"></i>
+                        <p>${message}</p>
+                        ${isSearching || isFiltering ? '<button onclick="clearAllFilters()" class="text-blue-600 hover:text-blue-800 text-sm mt-2"><i class="fas fa-times mr-1"></i> Clear all filters</button>' : ''}
+                    </div>
                 </td>
             </tr>
         `;
         updatePaginationControls(codes.length);
+        updateCodesCount();
         return;
     }
 
     paginatedCodes.forEach((affiliateCode, index) => {
         const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-100';
+        row.className = 'hover:bg-gray-100 transition-colors';
+        
+        // Highlight search matches
+        let codeDisplay = affiliateCode.code;
+        let statusDisplay = affiliateCode.status;
+        
+        if (searchTerm && searchTerm.length > 0) {
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            codeDisplay = codeDisplay.replace(regex, '<mark class="bg-yellow-200 font-bold">$1</mark>');
+            statusDisplay = statusDisplay.replace(regex, '<mark class="bg-yellow-200 font-bold">$1</mark>');
+        }
+        
         row.innerHTML = `
             <td class="py-3 px-4 border-b">${startIndex + index + 1}</td>
-            <td class="py-3 px-4 border-b font-mono font-bold">${affiliateCode.code}</td>
+            <td class="py-3 px-4 border-b font-mono font-bold">${codeDisplay}</td>
             <td class="py-3 px-4 border-b">
-                <span class="px-2 py-1 rounded-full text-xs ${affiliateCode.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
-                    ${affiliateCode.status.charAt(0).toUpperCase() + affiliateCode.status.slice(1)}
+                <span class="px-2 py-1 rounded-full text-xs ${affiliateCode.status === 'available' ? 'bg-green-100 text-green-800' : affiliateCode.status === 'assigned' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}">
+                    ${statusDisplay.charAt(0).toUpperCase() + statusDisplay.slice(1)}
                 </span>
             </td>
-            <td class="py-3 px-4 border-b">${affiliateCode.usedInSales.length} sale(s)</td>
             <td class="py-3 px-4 border-b">
-                <button class="copy-code-btn text-primary hover:text-blue-700" data-code="${affiliateCode.code}" aria-label="Copy code ${affiliateCode.code}">
-                    <i class="fas fa-copy"></i>
-                </button>
+                <span class="text-sm ${affiliateCode.usedInSales && affiliateCode.usedInSales.length > 0 ? 'text-blue-600 font-medium' : 'text-gray-500'}">
+                    ${affiliateCode.usedInSales ? affiliateCode.usedInSales.length : 0} sale(s)
+                </span>
+            </td>
+            <td class="py-3 px-4 border-b">
+                <div class="flex items-center space-x-2">
+                    <button class="copy-code-btn text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors" data-code="${affiliateCode.code}" aria-label="Copy code ${affiliateCode.code}" title="Copy code to clipboard">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    ${affiliateCode.usedInSales && affiliateCode.usedInSales.length > 0 ? 
+                        `<button class="view-usage-btn text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors" data-code="${affiliateCode.code}" aria-label="View usage details" title="View usage details">
+                            <i class="fas fa-eye"></i>
+                        </button>` : ''}
+                </div>
             </td>
         `;
         codesTableBody.appendChild(row);
@@ -274,7 +310,7 @@ function renderCodesTable() {
     updatePaginationControls(codes.length);
     updateCodesCount();
 
-    // Add event listeners for copy buttons
+    // Add event listeners for action buttons
     document.querySelectorAll('.copy-code-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const code = e.currentTarget.getAttribute('data-code');
@@ -286,7 +322,24 @@ function renderCodesTable() {
                 setTimeout(() => {
                     icon.className = originalIcon;
                 }, 2000);
+                
+                // Show toast notification
+                showAlert(`Code "${code}" copied to clipboard!`);
+            }).catch(() => {
+                showAlert('Failed to copy code. Please try again.');
             });
+        });
+    });
+
+    // Add event listeners for view usage buttons
+    document.querySelectorAll('.view-usage-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const code = e.currentTarget.getAttribute('data-code');
+            const affiliateCode = affiliateCodes.find(c => c.code === code);
+            if (affiliateCode && affiliateCode.usedInSales) {
+                const usageDetails = affiliateCode.usedInSales.join(', ');
+                showAlert(`Code "${code}" used in: ${usageDetails}`);
+            }
         });
     });
 }
@@ -298,35 +351,66 @@ function getTodayStr() {
 }
 
 function filteredCodes() {
-    // Filter by date range
-    let codes = affiliateCodes;
-    if (filterDateRange.from && filterDateRange.to) {
-        const fromDate = new Date(filterDateRange.from);
-        const toDate = new Date(filterDateRange.to);
-        codes = codes.filter(code => {
-            const codeDate = new Date(code.createdAt);
-            // Inclusive range
-            return codeDate >= fromDate && codeDate <= toDate;
-        });
-    } else if (filterDateRange.from) {
-        const fromDate = new Date(filterDateRange.from);
-        codes = codes.filter(code => new Date(code.createdAt) >= fromDate);
-    } else if (filterDateRange.to) {
-        const toDate = new Date(filterDateRange.to);
-        codes = codes.filter(code => new Date(code.createdAt) <= toDate);
-    } else {
-        // Default: today only
-        codes = codes.filter(code => code.createdAt === getTodayStr());
+    // Start with all codes
+    let codes = [...affiliateCodes];
+    
+    // First apply date filtering (if no specific date range, don't filter by date)
+    if (filterDateRange.from || filterDateRange.to) {
+        if (filterDateRange.from && filterDateRange.to) {
+            const fromDate = new Date(filterDateRange.from);
+            const toDate = new Date(filterDateRange.to);
+            codes = codes.filter(code => {
+                if (!code.createdAt) return true; // Include codes without creation date
+                const codeDate = new Date(code.createdAt);
+                return codeDate >= fromDate && codeDate <= toDate;
+            });
+        } else if (filterDateRange.from) {
+            const fromDate = new Date(filterDateRange.from);
+            codes = codes.filter(code => {
+                if (!code.createdAt) return true;
+                const codeDate = new Date(code.createdAt);
+                return codeDate >= fromDate;
+            });
+        } else if (filterDateRange.to) {
+            const toDate = new Date(filterDateRange.to);
+            codes = codes.filter(code => {
+                if (!code.createdAt) return true;
+                const codeDate = new Date(code.createdAt);
+                return codeDate <= toDate;
+            });
+        }
     }
 
-    // Filter by search term
-    if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        codes = codes.filter(code =>
-            code.code.toLowerCase().includes(term) ||
-            code.status.toLowerCase().includes(term) ||
-            (code.usedInSales && code.usedInSales.some(invoice => invoice.toLowerCase().includes(term)))
-        );
+    // Apply search term filtering
+    if (searchTerm && searchTerm.length > 0) {
+        const term = searchTerm.toLowerCase().trim();
+        codes = codes.filter(code => {
+            // Search in code
+            if (code.code && code.code.toLowerCase().includes(term)) {
+                return true;
+            }
+            
+            // Search in status
+            if (code.status && code.status.toLowerCase().includes(term)) {
+                return true;
+            }
+            
+            // Search in used sales invoices
+            if (code.usedInSales && Array.isArray(code.usedInSales)) {
+                for (let invoice of code.usedInSales) {
+                    if (invoice && invoice.toLowerCase().includes(term)) {
+                        return true;
+                    }
+                }
+            }
+            
+            // Search by number of sales used
+            if (code.usedInSales && code.usedInSales.length.toString().includes(term)) {
+                return true;
+            }
+            
+            return false;
+        });
     }
 
     return codes;
@@ -577,13 +661,76 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Affiliate Codes Search
+    // Affiliate Codes Search and Filtering
     const searchCodesInput = document.getElementById('search-codes');
+    const filterDateFrom = document.getElementById('filter-date-from');
+    const filterDateTo = document.getElementById('filter-date-to');
+    const clearDateFilterBtn = document.getElementById('clear-date-filter-btn');
+    
+    // Initialize filter dates to show all codes by default
+    filterDateRange = { from: '', to: '' };
+    
+    // Search input with debouncing for better performance
+    let searchTimeout;
     if (searchCodesInput) {
         searchCodesInput.addEventListener('input', function() {
-            searchTerm = this.value.trim();
-            currentPage = 1; // Reset to first page when searching
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchTerm = this.value.trim();
+                currentPage = 1; // Reset to first page when searching
+                renderCodesTable();
+                
+                // Visual feedback for search
+                if (searchTerm) {
+                    this.classList.add('border-blue-500', 'bg-blue-50');
+                } else {
+                    this.classList.remove('border-blue-500', 'bg-blue-50');
+                }
+            }, 300); // 300ms delay for debouncing
+        });
+        
+        // Clear search on Escape key
+        searchCodesInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                searchTerm = '';
+                currentPage = 1;
+                this.classList.remove('border-blue-500', 'bg-blue-50');
+                renderCodesTable();
+            }
+        });
+    }
+
+    // Date filter controls
+    if (filterDateFrom) {
+        filterDateFrom.addEventListener('change', function() {
+            filterDateRange.from = this.value;
+            currentPage = 1;
             renderCodesTable();
         });
+    }
+
+    if (filterDateTo) {
+        filterDateTo.addEventListener('change', function() {
+            filterDateRange.to = this.value;
+            currentPage = 1;
+            renderCodesTable();
+        });
+    }
+
+    if (clearDateFilterBtn) {
+        clearDateFilterBtn.addEventListener('click', function() {
+            filterDateRange = { from: '', to: '' };
+            if (filterDateFrom) filterDateFrom.value = '';
+            if (filterDateTo) filterDateTo.value = '';
+            currentPage = 1;
+            renderCodesTable();
+        });
+    }
+
+    // Add search shortcuts and help
+    if (searchCodesInput) {
+        searchCodesInput.setAttribute('placeholder', 'Search codes, status, invoices... (Press Esc to clear)');
+        searchCodesInput.setAttribute('title', 'Search by: code name, status (available/used), invoice numbers, or number of sales used');
     }
 });
