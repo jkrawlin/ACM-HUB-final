@@ -893,50 +893,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Referrer lookup functionality
-    const lookupReferrerBtn = document.getElementById('lookup-referrer-btn');
-    const referrerInput = document.getElementById('add-customer-referred-by');
-    
-    if (lookupReferrerBtn && referrerInput) {
-        // Manual lookup button
-        lookupReferrerBtn.addEventListener('click', function() {
-            const code = referrerInput.value.trim();
-            lookupReferrerByCode(code);
-        });
-        
-        // Real-time lookup as user types
-        let lookupTimeout;
-        referrerInput.addEventListener('input', function() {
-            clearTimeout(lookupTimeout);
-            const code = this.value.trim();
-            
-            if (code === '') {
-                clearReferrerFeedback();
-                return;
-            }
-            
-            // Debounce the lookup to avoid too many calls
-            lookupTimeout = setTimeout(() => {
-                lookupReferrerByCode(code);
-            }, 500);
-        });
-        
-        // Clear feedback when input is cleared
-        referrerInput.addEventListener('blur', function() {
-            if (this.value.trim() === '') {
-                clearReferrerFeedback();
-            }
-        });
-        
-        // Lookup on Enter key
-        referrerInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                lookupReferrerByCode(this.value.trim());
-            }
-        });
-    }
-    
     // Affiliate code assignment lookup functionality
     const lookupAffiliateCodeBtn = document.getElementById('lookup-affiliate-code-btn');
     const affiliateCodeInput = document.getElementById('add-customer-affiliate-code');
@@ -1050,6 +1006,50 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('sale-customer-name').value = '';
                     document.getElementById('sale-customer').value = '';
                 }
+            }
+        });
+    }
+
+    // Sale referrer lookup functionality
+    const lookupSaleReferrerBtn = document.getElementById('lookup-sale-referrer-btn');
+    const saleReferrerInput = document.getElementById('sale-referral');
+    
+    if (lookupSaleReferrerBtn && saleReferrerInput) {
+        // Manual lookup button
+        lookupSaleReferrerBtn.addEventListener('click', function() {
+            const code = saleReferrerInput.value.trim();
+            lookupSaleReferrerByCode(code);
+        });
+        
+        // Real-time lookup as user types
+        let saleReferrerTimeout;
+        saleReferrerInput.addEventListener('input', function() {
+            clearTimeout(saleReferrerTimeout);
+            const code = this.value.trim();
+            
+            if (code === '') {
+                clearSaleReferrerFeedback();
+                return;
+            }
+            
+            // Debounce the lookup to avoid too many calls
+            saleReferrerTimeout = setTimeout(() => {
+                lookupSaleReferrerByCode(code);
+            }, 500);
+        });
+        
+        // Clear feedback when input is cleared
+        saleReferrerInput.addEventListener('blur', function() {
+            if (this.value.trim() === '') {
+                clearSaleReferrerFeedback();
+            }
+        });
+        
+        // Lookup on Enter key
+        saleReferrerInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                lookupSaleReferrerByCode(this.value.trim());
             }
         });
     }
@@ -1451,64 +1451,23 @@ async function addNewCustomer() {
             customerAffiliateCode = generateAffiliateCode();
         }
         
-        // Handle referrer assignment - improved logic for direct code assignment
-        const referrerCode = sanitizeInput(document.getElementById('add-customer-referred-by').value);
-        let referrerAffiliateCode = null;
-        let referrerName = null;
+        // Create new customer object
+        const newCustomer = {
+            id: Math.max(...customers.map(c => c.id), 0) + 1,
+            name: name,
+            email: sanitizeInput(document.getElementById('add-customer-email').value),
+            phone: phone,
+            qid: sanitizeInput(document.getElementById('add-customer-qid').value),
+            vehiclePlate: vehiclePlate,
+            affiliateCode: customerAffiliateCode,
+            referredBy: null, // No referrer assignment during customer creation
+            referredCustomers: [],
+            accountBalance: 0,
+            notes: sanitizeInput(document.getElementById('add-customer-notes').value)
+        };
         
-        if (referrerCode) {
-            // Find referrer by exact or partial affiliate code match
-            const referrer = customers.find(c => 
-                c.affiliateCode && (
-                    c.affiliateCode.toLowerCase() === referrerCode.toLowerCase() ||
-                    c.affiliateCode.toLowerCase().includes(referrerCode.toLowerCase())
-                )
-            );
-            
-            if (referrer) {
-                referrerAffiliateCode = referrer.affiliateCode;
-                referrerName = referrer.name;
-                showAlert(`Customer will be assigned to referrer: ${referrerName} (${referrerAffiliateCode})`, 'success');
-            } else {
-                // Check if the entered code exists in the affiliate codes list
-                const affiliateCodeExists = affiliateCodes.find(code => 
-                    code.code.toLowerCase() === referrerCode.toLowerCase() ||
-                    code.code.toLowerCase().includes(referrerCode.toLowerCase())
-                );
-                
-                if (affiliateCodeExists) {
-                    // Allow direct assignment even if no customer owns this code yet
-                    referrerAffiliateCode = affiliateCodeExists.code;
-                    showAlert(`Customer assigned to affiliate code: ${affiliateCodeExists.code} (no customer owner found yet)`, 'warning');
-                } else {
-                    showAlert('Referrer affiliate code not found. Customer will be added without referrer.', 'warning');
-                }
-            }
-        }    // Create new customer object
-    const newCustomer = {
-        id: Math.max(...customers.map(c => c.id), 0) + 1,
-        name: name,
-        email: sanitizeInput(document.getElementById('add-customer-email').value),
-        phone: phone,
-        qid: sanitizeInput(document.getElementById('add-customer-qid').value),
-        vehiclePlate: vehiclePlate,
-        affiliateCode: customerAffiliateCode,
-        referredBy: referrerAffiliateCode,
-        referredCustomers: [],
-        accountBalance: 0,
-        notes: sanitizeInput(document.getElementById('add-customer-notes').value)
-    };
-    
-    // Add customer to the array
-    customers.push(newCustomer);
-    
-    // Update referrer's referred customers list if a customer referrer was found
-    if (referrerAffiliateCode) {
-        const referrer = customers.find(c => c.affiliateCode === referrerAffiliateCode);
-        if (referrer && !referrer.referredCustomers.includes(newCustomer.id)) {
-            referrer.referredCustomers.push(newCustomer.id);
-        }
-    }
+        // Add customer to the array
+        customers.push(newCustomer);
     
         // Save to Firebase and update UI
         saveDataToFirestore();
@@ -1572,6 +1531,12 @@ async function saveNewSale() {
             
             customerId = customer.id;
             customerName = customer.name;
+            
+            // Auto-populate referral field if customer has a referrer
+            const referralInput = document.getElementById('sale-referral');
+            if (referralInput && customer.referredBy) {
+                referralInput.value = customer.referredBy;
+            }
         } else {
             // Create new customer
             const newCustomerName = document.getElementById('new-customer-name');
@@ -1592,6 +1557,24 @@ async function saveNewSale() {
                 return;
             }
             
+            // Handle referrer code validation
+            const referrerCode = sanitizeInput(document.getElementById('sale-referral').value);
+            let validReferrerCode = null;
+            
+            if (referrerCode) {
+                // Find referrer by affiliate code
+                const referrer = customers.find(c => 
+                    c.affiliateCode && c.affiliateCode.toLowerCase() === referrerCode.toLowerCase()
+                );
+                
+                if (referrer) {
+                    validReferrerCode = referrer.affiliateCode;
+                    showAlert(`New customer will be linked to referrer: ${referrer.name} (${referrer.affiliateCode})`, 'success');
+                } else {
+                    showAlert(`Referrer code "${referrerCode}" not found. Customer will be created without referrer.`, 'warning');
+                }
+            }
+            
             const newCustomer = {
                 id: Math.max(...customers.map(c => c.id), 0) + 1,
                 name: name,
@@ -1600,13 +1583,22 @@ async function saveNewSale() {
                 qid: sanitizeInput(document.getElementById('new-customer-qid').value),
                 vehiclePlate: vehiclePlate,
                 affiliateCode: 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase(),
-                referredBy: sanitizeInput(document.getElementById('sale-referral').value) || null,
+                referredBy: validReferrerCode,
                 referredCustomers: [],
                 accountBalance: 0,
                 notes: ''
             };
             
             customers.push(newCustomer);
+            
+            // Update referrer's referred customers list
+            if (validReferrerCode) {
+                const referrer = customers.find(c => c.affiliateCode === validReferrerCode);
+                if (referrer && !referrer.referredCustomers.includes(newCustomer.id)) {
+                    referrer.referredCustomers.push(newCustomer.id);
+                }
+            }
+            
             customerId = newCustomer.id;
             customerName = newCustomer.name;
         }
@@ -1618,6 +1610,29 @@ async function saveNewSale() {
             return;
         }
         
+        // Calculate sale total from service rows
+        function calculateSaleTotal() {
+            const serviceRows = document.querySelectorAll('#sale-services-container .service-row');
+            let total = 0;
+            
+            serviceRows.forEach(row => {
+                const priceInput = row.querySelector('input[name="service-price"]');
+                const quantityInput = row.querySelector('input[name="service-quantity"]');
+                
+                if (priceInput && quantityInput) {
+                    const price = parseFloat(priceInput.value) || 0;
+                    const quantity = parseInt(quantityInput.value) || 0;
+                    total += price * quantity;
+                }
+            });
+            
+            return total;
+        }
+
+        const saleTotal = calculateSaleTotal();
+        const discount = parseFloat(document.getElementById('sale-discount').value) || 0;
+        const finalTotal = saleTotal - discount;
+
         // Create new sale
         const newSale = {
             id: Math.max(...sales.map(s => s.id), 0) + 1,
@@ -1627,11 +1642,28 @@ async function saveNewSale() {
             customerId: customerId,
             services: 'Service Details', // This would be populated from service rows
             servicesList: [], // This would be populated from service rows
-            amount: 'QR 0', // This would be calculated from service rows
+            amount: `QR ${finalTotal.toFixed(2)}`,
             referral: sanitizeInput(document.getElementById('sale-referral').value) || null,
-            commission: null, // Calculate based on referral
-            discount: parseFloat(document.getElementById('sale-discount').value) || 0
+            commission: null, // Will be calculated below
+            discount: discount
         };
+
+        // Calculate commission for customers with referrers (only if sale total > 0)
+        const currentCustomer = customers.find(c => c.id === customerId);
+        if (currentCustomer && currentCustomer.referredBy && finalTotal > 0) {
+            const referrer = customers.find(c => c.affiliateCode === currentCustomer.referredBy);
+            if (referrer) {
+                const commissionAmount = finalTotal * 0.03; // 3% commission
+                
+                // Update referrer's balance
+                referrer.accountBalance = (referrer.accountBalance || 0) + commissionAmount;
+                
+                // Set commission in sale record
+                newSale.commission = `QR ${commissionAmount.toFixed(2)}`;
+                
+                showAlert(`Commission QR ${commissionAmount.toFixed(2)} added to ${referrer.name}'s account for referring ${customerName}`, 'success');
+            }
+        }
         
         sales.push(newSale);
         saveDataToFirestore();
@@ -1817,6 +1849,56 @@ function showReferrerFeedback(type, status, details) {
 
 function clearReferrerFeedback() {
     const feedbackDiv = document.getElementById('referrer-feedback');
+    if (feedbackDiv) {
+        feedbackDiv.classList.add('hidden');
+    }
+}
+
+// Sale referrer lookup functions
+function lookupSaleReferrerByCode(code) {
+    if (!code) {
+        return clearSaleReferrerFeedback();
+    }
+    
+    const customer = customers.find(c => 
+        c.affiliateCode && c.affiliateCode.toLowerCase() === code.toLowerCase()
+    );
+    
+    if (customer) {
+        showSaleReferrerFeedback('success', '✓ Valid referrer:', customer.name);
+    } else {
+        showSaleReferrerFeedback('error', '✗ Referrer not found:', 'Please check the affiliate code');
+    }
+}
+
+function showSaleReferrerFeedback(type, status, name) {
+    const feedbackDiv = document.getElementById('sale-referrer-feedback');
+    const statusSpan = document.getElementById('sale-referrer-status');
+    const nameSpan = document.getElementById('sale-referrer-name');
+    
+    if (!feedbackDiv || !statusSpan || !nameSpan) return;
+    
+    feedbackDiv.classList.remove('hidden');
+    statusSpan.textContent = status;
+    nameSpan.textContent = name;
+    
+    // Apply styling based on type
+    feedbackDiv.className = 'mt-2 text-sm';
+    switch (type) {
+        case 'success':
+            feedbackDiv.classList.add('text-green-700');
+            break;
+        case 'error':
+            feedbackDiv.classList.add('text-red-700');
+            break;
+        case 'warning':
+            feedbackDiv.classList.add('text-yellow-700');
+            break;
+    }
+}
+
+function clearSaleReferrerFeedback() {
+    const feedbackDiv = document.getElementById('sale-referrer-feedback');
     if (feedbackDiv) {
         feedbackDiv.classList.add('hidden');
     }
