@@ -515,7 +515,20 @@ function loadDataFromFirestore() {
             affiliateCodes = []; // No sample for affiliateCodes, start empty
             saveDataToFirestore();
         } else {
-            snapshot.forEach(doc => affiliateCodes.push(doc.data()));
+            snapshot.forEach(doc => {
+                const code = doc.data();
+                // Ensure all codes have a creation date
+                if (!code.createdAt) {
+                    code.createdAt = getTodayStr();
+                }
+                // Ensure usedInSales is an array
+                if (!code.usedInSales) {
+                    code.usedInSales = [];
+                }
+                affiliateCodes.push(code);
+            });
+            // Save back to ensure all codes have proper structure
+            saveDataToFirestore();
         }
         renderCodesTable();
         updateCodesCount();
@@ -733,4 +746,192 @@ document.addEventListener('DOMContentLoaded', function() {
         searchCodesInput.setAttribute('placeholder', 'Search codes, status, invoices... (Press Esc to clear)');
         searchCodesInput.setAttribute('title', 'Search by: code name, status (available/used), invoice numbers, or number of sales used');
     }
+
+    // Pagination event listeners for affiliate codes
+    const firstPageBtn = document.getElementById('first-page');
+    const prevPageBtn = document.getElementById('prev-page');
+    const nextPageBtn = document.getElementById('next-page');
+    const lastPageBtn = document.getElementById('last-page');
+
+    if (firstPageBtn) {
+        firstPageBtn.addEventListener('click', function() {
+            currentPage = 1;
+            renderCodesTable();
+        });
+    }
+
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderCodesTable();
+            }
+        });
+    }
+
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', function() {
+            const totalPages = Math.ceil(filteredCodes().length / codesPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderCodesTable();
+            }
+        });
+    }
+
+    if (lastPageBtn) {
+        lastPageBtn.addEventListener('click', function() {
+            const totalPages = Math.ceil(filteredCodes().length / codesPerPage);
+            currentPage = totalPages || 1;
+            renderCodesTable();
+        });
+    }
+
+    // Generate code buttons event listeners
+    const generateSingleBtn = document.getElementById('generate-single-btn');
+    const generateCodesBtn = document.getElementById('generate-codes-btn');
+    const copyAllTodayBtn = document.getElementById('copy-all-today-btn');
+
+    if (generateSingleBtn) {
+        generateSingleBtn.addEventListener('click', function() {
+            generateNewCode();
+        });
+    }
+
+    if (generateCodesBtn) {
+        generateCodesBtn.addEventListener('click', function() {
+            generateMultipleCodes(100);
+        });
+    }
+
+    if (copyAllTodayBtn) {
+        copyAllTodayBtn.addEventListener('click', function() {
+            copyAllTodayCodes();
+        });
+    }
 });
+
+// Generate a single new affiliate code
+function generateNewCode() {
+    const newCode = {
+        code: generateRandomCode(),
+        status: 'available',
+        usedInSales: [],
+        createdAt: getTodayStr()
+    };
+    
+    affiliateCodes.push(newCode);
+    saveDataToFirestore();
+    renderCodesTable();
+    updateCodesCount();
+    showAlert('New affiliate code generated successfully!');
+}
+
+// Generate multiple affiliate codes
+function generateMultipleCodes(count) {
+    const newCodes = [];
+    const today = getTodayStr();
+    
+    for (let i = 0; i < count; i++) {
+        newCodes.push({
+            code: generateRandomCode(),
+            status: 'available',
+            usedInSales: [],
+            createdAt: today
+        });
+    }
+    
+    affiliateCodes.push(...newCodes);
+    saveDataToFirestore();
+    renderCodesTable();
+    updateCodesCount();
+    showAlert(`Generated ${count} new affiliate codes successfully!`);
+}
+
+// Generate a random affiliate code
+function generateRandomCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = 'AFF';
+    for (let i = 0; i < 5; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    // Ensure uniqueness
+    while (affiliateCodes.some(code => code.code === result)) {
+        result = 'AFF';
+        for (let i = 0; i < 5; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+    }
+    
+    return result;
+}
+
+// Copy all today's codes to clipboard
+function copyAllTodayCodes() {
+    const todayCodes = affiliateCodes.filter(code => code.createdAt === getTodayStr());
+    
+    if (todayCodes.length === 0) {
+        showAlert('No codes generated today to copy.');
+        return;
+    }
+    
+    const codesList = todayCodes.map(code => code.code).join('\n');
+    
+    navigator.clipboard.writeText(codesList).then(() => {
+        showAlert(`Copied ${todayCodes.length} codes generated today to clipboard!`);
+    }).catch(() => {
+        showAlert('Failed to copy codes to clipboard. Please try again.');
+    });
+}
+
+// Clear all filters function (called from clear filters button in table)
+function clearAllFilters() {
+    searchTerm = '';
+    filterDateRange = { from: '', to: '' };
+    currentPage = 1;
+    
+    const searchInput = document.getElementById('search-codes');
+    const filterFromInput = document.getElementById('filter-date-from');
+    const filterToInput = document.getElementById('filter-date-to');
+    
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.classList.remove('border-blue-500', 'bg-blue-50');
+    }
+    if (filterFromInput) filterFromInput.value = '';
+    if (filterToInput) filterToInput.value = '';
+    
+    renderCodesTable();
+}
+
+// Save data to Firestore (updated to handle affiliate codes properly)
+function saveDataToFirestore() {
+    // Save customers
+    customers.forEach(customer => {
+        db.collection('customers').doc(customer.id.toString()).set(customer);
+    });
+
+    // Save sales
+    sales.forEach(sale => {
+        db.collection('sales').doc(sale.id.toString()).set(sale);
+    });
+
+    // Save referrals
+    referrals.forEach(referral => {
+        db.collection('referrals').doc(referral.id.toString()).set(referral);
+    });
+
+    // Save affiliate codes with proper structure
+    affiliateCodes.forEach((code, index) => {
+        const codeWithId = {
+            id: index + 1,
+            ...code,
+            createdAt: code.createdAt || getTodayStr() // Ensure all codes have a creation date
+        };
+        db.collection('affiliateCodes').doc(codeWithId.id.toString()).set(codeWithId);
+    });
+
+    // Save commission rate
+    db.collection('settings').doc('commission').set({ rate: commissionRate });
+}
