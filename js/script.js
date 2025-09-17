@@ -1836,6 +1836,9 @@ async function saveNewSale() {
             let validReferrerCode = null;
             
             if (referrerCode) {
+                console.log('Looking for referrer code:', referrerCode);
+                console.log('Available customers:', customers.map(c => ({ id: c.id, name: c.name, affiliateCode: c.affiliateCode })));
+                
                 // Find referrer by affiliate code
                 const referrer = customers.find(c => 
                     c.affiliateCode && c.affiliateCode.toLowerCase() === referrerCode.toLowerCase()
@@ -1843,8 +1846,10 @@ async function saveNewSale() {
                 
                 if (referrer) {
                     validReferrerCode = referrer.affiliateCode;
+                    console.log('Found referrer:', referrer);
                     showAlert(`New customer will be linked to referrer: ${referrer.name} (${referrer.affiliateCode})`, 'success');
                 } else {
+                    console.log('Referrer not found. Searched for:', referrerCode);
                     showAlert(`Referrer code "${referrerCode}" not found. Customer will be created without referrer.`, 'warning');
                 }
             }
@@ -1934,13 +1939,21 @@ async function saveNewSale() {
 
         // Update customer balance if referral (but let function handle for consistency)
         const currentCustomer = customers.find(c => c.id === customerId);
+        console.log('Current customer:', currentCustomer);
+        console.log('Current customer referredBy:', currentCustomer?.referredBy);
+        
         if (currentCustomer && currentCustomer.referredBy && finalTotal > 0) {
             const commissionAmount = finalTotal * 0.03;
+            console.log('Processing commission for referrer code:', currentCustomer.referredBy);
             
             // Find the referrer customer by affiliate code, not by ID
             const referrerCustomer = customers.find(c => c.affiliateCode === currentCustomer.referredBy);
+            console.log('Found referrer customer:', referrerCustomer);
+            
             if (referrerCustomer) {
                 const referrerRef = db.collection('customers').doc(referrerCustomer.id.toString());
+                console.log('Updating referrer document ID:', referrerCustomer.id.toString());
+                
                 await referrerRef.update({
                     accountBalance: firebase.firestore.FieldValue.increment(commissionAmount)
                 });
@@ -1952,6 +1965,7 @@ async function saveNewSale() {
                 });
             } else {
                 console.error('Referrer customer not found for affiliate code:', currentCustomer.referredBy);
+                console.log('Available customers with affiliate codes:', customers.filter(c => c.affiliateCode).map(c => ({ id: c.id, name: c.name, affiliateCode: c.affiliateCode })));
             }
         }
 
