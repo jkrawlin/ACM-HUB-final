@@ -1195,17 +1195,72 @@ document.addEventListener('DOMContentLoaded', function() {
     if (saleCustomerCode) {
         saleCustomerCode.addEventListener('input', function() {
             const code = this.value.trim();
+            const customerNameField = document.getElementById('sale-customer-name');
+            const customerIdField = document.getElementById('sale-customer');
+            const referralField = document.getElementById('sale-referral');
+            
             if (code) {
-                const customer = customers.find(c => c.affiliateCode === code);
+                // Search for customer by affiliate code (case-insensitive partial match)
+                const customer = customers.find(c => 
+                    c.affiliateCode && c.affiliateCode.toLowerCase().includes(code.toLowerCase())
+                );
+                
                 if (customer) {
-                    document.getElementById('sale-customer-name').value = customer.name;
-                    document.getElementById('sale-customer').value = customer.id;
-                    document.getElementById('sale-referral').value = customer.referredBy || '';
+                    // Auto-fill customer details
+                    customerNameField.value = customer.name;
+                    customerIdField.value = customer.id;
+                    
+                    // Auto-fill referral code if customer has a referrer
+                    if (customer.referredBy && referralField) {
+                        referralField.value = customer.referredBy;
+                    } else if (referralField) {
+                        referralField.value = '';
+                    }
+                    
+                    // Visual feedback - success
+                    this.classList.remove('border-red-500', 'bg-red-50');
+                    this.classList.add('border-green-500', 'bg-green-50');
+                    customerNameField.classList.remove('border-red-500', 'bg-red-50');
+                    customerNameField.classList.add('border-green-500', 'bg-green-50');
+                    
+                    // Update placeholder to show found customer
+                    customerNameField.placeholder = `Found: ${customer.name}`;
+                    
                 } else {
-                    document.getElementById('sale-customer-name').value = '';
-                    document.getElementById('sale-customer').value = '';
+                    // Clear fields if no customer found
+                    customerNameField.value = 'Customer not found';
+                    customerIdField.value = '';
+                    if (referralField) {
+                        referralField.value = '';
+                    }
+                    
+                    // Visual feedback - error
+                    this.classList.remove('border-green-500', 'bg-green-50');
+                    this.classList.add('border-red-500', 'bg-red-50');
+                    customerNameField.classList.remove('border-green-500', 'bg-green-50');
+                    customerNameField.classList.add('border-red-500', 'bg-red-50');
+                    
+                    // Update placeholder to show error
+                    customerNameField.placeholder = 'Customer not found...';
                 }
+            } else {
+                // Clear all fields when code is empty
+                customerNameField.value = '';
+                customerIdField.value = '';
+                if (referralField) {
+                    referralField.value = '';
+                }
+                
+                // Reset visual feedback
+                this.classList.remove('border-red-500', 'bg-red-50', 'border-green-500', 'bg-green-50');
+                customerNameField.classList.remove('border-red-500', 'bg-red-50', 'border-green-500', 'bg-green-50');
+                customerNameField.placeholder = 'Customer name will appear here...';
             }
+        });
+        
+        // Clear visual feedback on focus
+        saleCustomerCode.addEventListener('focus', function() {
+            this.classList.remove('border-red-500', 'bg-red-50');
         });
     }
 
