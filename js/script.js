@@ -78,8 +78,8 @@ async function loadDataFromFirestore() {
         showAlert('Data loaded successfully!');
     } catch (error) {
         console.error('Error loading data:', error);
-        showAlert('Failed to load data. Using sample data.', 'error');
-        // Fallback to samples if needed
+        showAlert('Failed to load data from Firestore. Starting with empty collections.', 'error');
+        // Initialize empty arrays - no fallback data
     }
 }
 
@@ -142,26 +142,8 @@ function updateReferralsFromData() {
     }).filter(r => r.totalReferrals > 0);
 }
 
-// Sample Data (commented out - now using Firestore as primary data source)
-// These samples are only used as fallback if Firestore is empty
-const sampleCustomers = [
-    { id: 1, name: 'Ahmed Mohamed', email: 'ahmed@example.com', phone: '555123456', qid: '123456789012', vehiclePlate: 'ABC-1234', affiliateCode: 'AFF1234', referredBy: null, referredCustomers: [2, 3, 4], accountBalance: 120.00, notes: 'Loyal customer' },
-    { id: 2, name: 'Fatima Ali', email: 'fatima@example.com', phone: '555987654', qid: '987654321098', vehiclePlate: 'XYZ-5678', affiliateCode: 'AFF5678', referredBy: 'AFF1234', referredCustomers: [], accountBalance: 50.00, notes: '' },
-    { id: 3, name: 'Mohammed Hassan', email: 'mohammed@example.com', phone: '555456123', qid: '456123789045', vehiclePlate: 'DEF-9012', affiliateCode: 'AFF9012', referredBy: 'AFF1234', referredCustomers: [5], accountBalance: 280.00, notes: 'High spender' },
-    { id: 4, name: 'Mariam Abdullah', email: 'mariam@example.com', phone: '555789456', qid: '789456123078', vehiclePlate: 'GHI-3456', affiliateCode: 'AFF3456', referredBy: 'AFF1234', referredCustomers: [], accountBalance: 90.00, notes: '' },
-    { id: 5, name: 'Khalid Ibrahim', email: 'khalid@example.com', phone: '555321789', qid: '321789654032', vehiclePlate: 'JKL-7890', affiliateCode: 'AFF7890', referredBy: 'AFF9012', referredCustomers: [], accountBalance: 0.00, notes: '' }
-];
-
-const sampleSales = [
-    { id: 1, date: '2023-05-15', invoice: 'INV-001', customer: 'Ahmed Mohamed', customerId: 1, services: 'Oil Change, AC Service', servicesList: [{ name: 'Oil Change', price: 120, quantity: 1 }, { name: 'AC Service', price: 200, quantity: 1 }], amount: 'QR 320', referral: 'AFF7890', commission: 'QR 9.60', discount: 0 },
-    { id: 2, date: '2023-05-16', invoice: 'INV-002', customer: 'Fatima Ali', customerId: 2, services: 'Tire Rotation, Brake Check', servicesList: [{ name: 'Tire Rotation', price: 150, quantity: 1 }, { name: 'Brake Check', price: 300, quantity: 1 }], amount: 'QR 450', referral: null, commission: null, discount: 0 },
-    { id: 3, date: '2023-05-17', invoice: 'INV-003', customer: 'Mohammed Hassan', customerId: 3, services: 'Full Service', servicesList: [{ name: 'Full Service', price: 800, quantity: 1 }], amount: 'QR 800', referral: 'AFF1234', commission: 'QR 24.00', discount: 0 },
-    { id: 4, date: '2023-05-18', invoice: 'INV-004', customer: 'Mariam Abdullah', customerId: 4, services: 'Wheel Alignment', servicesList: [{ name: 'Wheel Alignment', price: 150, quantity: 1 }], amount: 'QR 150', referral: null, commission: null, discount: 0 },
-    { id: 5, date: '2023-05-19', invoice: 'INV-005', customer: 'Khalid Ibrahim', customerId: 5, services: 'Battery Replacement', servicesList: [{ name: 'Battery Replacement', price: 280, quantity: 1 }], amount: 'QR 280', referral: 'AFF3456', commission: 'QR 8.40', discount: 0 }
-];
-
-// Referrals are now derived from customer data, not stored separately
-// const sampleReferrals = [...] - Removed, now using updateReferralsFromData()
+// Sample Data removed - now using Firestore as the only data source
+// No fallback data - application will start with empty collections if Firestore is empty
 
 // Global variables for table rendering
 let customers = [];
@@ -603,38 +585,17 @@ function updateCodesCount() {
     }
 }
 
-// Updated loadDataFromFirestore function to use proper document mapping
+// Updated loadDataFromFirestore function to use only Firestore data
 async function loadDataFromFirestore() {
     try {
         // Load customers
         const customersSnapshot = await db.collection('customers').get();
-        if (customersSnapshot.empty) {
-            customers = sampleCustomers; // Fallback to sample
-            // Seed sample data to Firestore
-            const batch = db.batch();
-            customers.forEach(customer => {
-                const docRef = db.collection('customers').doc(customer.id.toString());
-                batch.set(docRef, customer);
-            });
-            await batch.commit();
-        } else {
-            customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
+        customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderCustomerTable();
 
         // Load sales
         const salesSnapshot = await db.collection('sales').get();
-        if (salesSnapshot.empty) {
-            sales = sampleSales;
-            const batch = db.batch();
-            sales.forEach(sale => {
-                const docRef = db.collection('sales').doc(sale.id.toString());
-                batch.set(docRef, sale);
-            });
-            await batch.commit();
-        } else {
-            sales = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
+        sales = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderSalesTable();
 
         // Update referrals from customer data
@@ -643,22 +604,18 @@ async function loadDataFromFirestore() {
 
         // Load affiliateCodes
         const codesSnapshot = await db.collection('affiliateCodes').get();
-        if (codesSnapshot.empty) {
-            affiliateCodes = []; // No sample for affiliateCodes, start empty
-        } else {
-            affiliateCodes = codesSnapshot.docs.map(doc => {
-                const code = { id: doc.id, ...doc.data() };
-                // Ensure all codes have a creation date
-                if (!code.createdAt) {
-                    code.createdAt = getTodayStr();
-                }
-                // Ensure usedInSales is an array
-                if (!code.usedInSales) {
-                    code.usedInSales = [];
-                }
-                return code;
-            });
-        }
+        affiliateCodes = codesSnapshot.docs.map(doc => {
+            const code = { id: doc.id, ...doc.data() };
+            // Ensure all codes have a creation date
+            if (!code.createdAt) {
+                code.createdAt = getTodayStr();
+            }
+            // Ensure usedInSales is an array
+            if (!code.usedInSales) {
+                code.usedInSales = [];
+            }
+            return code;
+        });
         renderCodesTable();
         updateCodesCount();
 
@@ -679,11 +636,11 @@ async function loadDataFromFirestore() {
     } catch (error) {
         console.error('Error loading data:', error);
         showAlert('Error loading data: ' + error.message, 'error');
-        // Fallback to sample data
-        customers = sampleCustomers;
-        sales = sampleSales;
+        // Initialize empty arrays on error - no sample data fallback
+        customers = [];
+        sales = [];
         affiliateCodes = [];
-        updateReferralsFromData();
+        referrals = [];
         renderCustomerTable();
         renderSalesTable();
         renderReferralsTable();
