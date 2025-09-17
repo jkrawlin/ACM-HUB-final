@@ -207,6 +207,7 @@ const codesPerPage = 10;
 // Global variables for filtering
 let filterDateRange = { from: '', to: '' };
 let searchTerm = ''; // Add search term variable
+let customerSearchTerm = ''; // Customer search term variable
 
 // Render Customer Table with Pagination and Sorting
 function renderCustomerTable(data = customers, page = 1) {
@@ -951,6 +952,67 @@ document.addEventListener('DOMContentLoaded', function() {
         copyAllTodayBtn.addEventListener('click', function() {
             copyAllTodayCodes();
         });
+    }
+
+    // Customer Search Functionality
+    const customerSearchInput = document.getElementById('customer-search');
+    let customerSearchTimeout;
+    let customerSearchTerm = '';
+    
+    if (customerSearchInput) {
+        customerSearchInput.addEventListener('input', function() {
+            clearTimeout(customerSearchTimeout);
+            customerSearchTimeout = setTimeout(() => {
+                customerSearchTerm = this.value.trim();
+                currentCustomerPage = 1; // Reset to first page when searching
+                
+                // Filter customers based on search term
+                let filteredCustomers = customers;
+                if (customerSearchTerm) {
+                    const term = customerSearchTerm.toLowerCase();
+                    filteredCustomers = customers.filter(customer => {
+                        return (
+                            // Search in name
+                            customer.name.toLowerCase().includes(term) ||
+                            // Search in email
+                            (customer.email && customer.email.toLowerCase().includes(term)) ||
+                            // Search in phone
+                            customer.phone.includes(term) ||
+                            // Search in QID
+                            (customer.qid && customer.qid.toLowerCase().includes(term)) ||
+                            // Search in vehicle plate
+                            (customer.vehiclePlate && customer.vehiclePlate.toLowerCase().includes(term)) ||
+                            // Search in affiliate code
+                            (customer.affiliateCode && customer.affiliateCode.toLowerCase().includes(term))
+                        );
+                    });
+                }
+                
+                renderCustomerTable(filteredCustomers, currentCustomerPage);
+                
+                // Visual feedback for search
+                if (customerSearchTerm) {
+                    this.classList.add('border-blue-500', 'bg-blue-50');
+                } else {
+                    this.classList.remove('border-blue-500', 'bg-blue-50');
+                }
+            }, 300); // 300ms delay for debouncing
+        });
+        
+        // Clear search on Escape key
+        customerSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                customerSearchTerm = '';
+                currentCustomerPage = 1;
+                this.classList.remove('border-blue-500', 'bg-blue-50');
+                renderCustomerTable(customers, currentCustomerPage);
+            }
+        });
+        
+        // Update placeholder to show affiliate code search capability
+        customerSearchInput.setAttribute('placeholder', 'Search by name, email, phone, QID, vehicle plate, affiliate code... (Press Esc to clear)');
+        customerSearchInput.setAttribute('title', 'Search customers by: name, email, phone, QID, vehicle plate, or affiliate code');
     }
 
     // Main action buttons
