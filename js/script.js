@@ -1831,27 +1831,31 @@ async function saveNewSale() {
                 return;
             }
             
-            // Handle referrer code validation
+            // Handle referrer code validation (required for new customers)
             const referrerCode = sanitizeInput(document.getElementById('sale-referral').value);
             let validReferrerCode = null;
             
-            if (referrerCode) {
-                console.log('Looking for referrer code:', referrerCode);
-                console.log('Available customers:', customers.map(c => ({ id: c.id, name: c.name, affiliateCode: c.affiliateCode })));
-                
-                // Find referrer by affiliate code
-                const referrer = customers.find(c => 
-                    c.affiliateCode && c.affiliateCode.toLowerCase() === referrerCode.toLowerCase()
-                );
-                
-                if (referrer) {
-                    validReferrerCode = referrer.affiliateCode;
-                    console.log('Found referrer:', referrer);
-                    showAlert(`New customer will be linked to referrer: ${referrer.name} (${referrer.affiliateCode})`, 'success');
-                } else {
-                    console.log('Referrer not found. Searched for:', referrerCode);
-                    showAlert(`Referrer code "${referrerCode}" not found. Customer will be created without referrer.`, 'warning');
-                }
+            if (!referrerCode) {
+                showAlert('Referrer code is required for new customers. Please enter a valid referrer affiliate code.', 'error');
+                return;
+            }
+            
+            console.log('Looking for referrer code:', referrerCode);
+            console.log('Available customers:', customers.map(c => ({ id: c.id, name: c.name, affiliateCode: c.affiliateCode })));
+            
+            // Find referrer by affiliate code
+            const referrer = customers.find(c => 
+                c.affiliateCode && c.affiliateCode.toLowerCase() === referrerCode.toLowerCase()
+            );
+            
+            if (referrer) {
+                validReferrerCode = referrer.affiliateCode;
+                console.log('Found referrer:', referrer);
+                showAlert(`New customer will be linked to referrer: ${referrer.name} (${referrer.affiliateCode})`, 'success');
+            } else {
+                console.log('Referrer not found. Searched for:', referrerCode);
+                showAlert(`Referrer code "${referrerCode}" not found. Please enter a valid referrer affiliate code.`, 'error');
+                return;
             }
             
             // Get the customer affiliate code from the existing input field
