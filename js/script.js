@@ -1936,16 +1936,23 @@ async function saveNewSale() {
         const currentCustomer = customers.find(c => c.id === customerId);
         if (currentCustomer && currentCustomer.referredBy && finalTotal > 0) {
             const commissionAmount = finalTotal * 0.03;
-            const referrerRef = db.collection('customers').doc(currentCustomer.referredBy.toString());
-            await referrerRef.update({
-                accountBalance: firebase.firestore.FieldValue.increment(commissionAmount)
-            });
             
-            // Set commission in sale record
-            newSale.commission = `QR ${commissionAmount.toFixed(2)}`;
-            await db.collection('sales').doc(newSale.id.toString()).update({
-                commission: newSale.commission
-            });
+            // Find the referrer customer by affiliate code, not by ID
+            const referrerCustomer = customers.find(c => c.affiliateCode === currentCustomer.referredBy);
+            if (referrerCustomer) {
+                const referrerRef = db.collection('customers').doc(referrerCustomer.id.toString());
+                await referrerRef.update({
+                    accountBalance: firebase.firestore.FieldValue.increment(commissionAmount)
+                });
+                
+                // Set commission in sale record
+                newSale.commission = `QR ${commissionAmount.toFixed(2)}`;
+                await db.collection('sales').doc(newSale.id.toString()).update({
+                    commission: newSale.commission
+                });
+            } else {
+                console.error('Referrer customer not found for affiliate code:', currentCustomer.referredBy);
+            }
         }
 
         // Reload data and render
