@@ -1854,30 +1854,40 @@ async function saveNewSale() {
                 }
             }
             
-            // Generate affiliate code for new customer (use available codes)
-            let customerAffiliateCode;
+            // Get the customer affiliate code from the input field
+            const customerAffiliateCodeInput = sanitizeInput(document.getElementById('new-customer-affiliate-code').value);
             
-            // Find an available affiliate code
-            const availableCode = affiliateCodes.find(c => c.status === 'available');
-            if (availableCode) {
-                customerAffiliateCode = availableCode.code;
-                // Mark the code as assigned
-                availableCode.status = 'assigned';
-                await db.collection('affiliateCodes').doc(availableCode.id.toString()).update({
+            if (!customerAffiliateCodeInput) {
+                showAlert('Please enter the customer affiliate code from their card.', 'error');
+                return;
+            }
+            
+            // Check if the affiliate code already exists
+            const existingCustomer = customers.find(c => 
+                c.affiliateCode && c.affiliateCode.toLowerCase() === customerAffiliateCodeInput.toLowerCase()
+            );
+            
+            if (existingCustomer) {
+                showAlert(`Affiliate code "${customerAffiliateCodeInput}" is already assigned to customer: ${existingCustomer.name}`, 'error');
+                return;
+            }
+            
+            // Check if it exists in affiliate codes pool
+            const existingAffiliateCode = affiliateCodes.find(c => 
+                c.code && c.code.toLowerCase() === customerAffiliateCodeInput.toLowerCase()
+            );
+            
+            if (existingAffiliateCode && existingAffiliateCode.status !== 'available') {
+                showAlert(`Affiliate code "${customerAffiliateCodeInput}" is already ${existingAffiliateCode.status}`, 'error');
+                return;
+            }
+            
+            // Mark the code as assigned if it exists in the pool
+            if (existingAffiliateCode) {
+                existingAffiliateCode.status = 'assigned';
+                await db.collection('affiliateCodes').doc(existingAffiliateCode.id.toString()).update({
                     status: 'assigned'
                 });
-                showAlert(`Assigned affiliate code: ${customerAffiliateCode}`, 'success');
-            } else {
-                // If no available codes, generate a new one using the same function as addNewCustomer
-                const generateAffiliateCode = () => {
-                    let code;
-                    do {
-                        code = 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase();
-                    } while (customers.some(c => c.affiliateCode === code) || affiliateCodes.some(c => c.code === code));
-                    return code;
-                };
-                customerAffiliateCode = generateAffiliateCode();
-                showAlert(`No available affiliate codes. Generated new code: ${customerAffiliateCode}`, 'warning');
             }
             
             const newCustomer = {
@@ -1887,7 +1897,7 @@ async function saveNewSale() {
                 phone: phone,
                 qid: sanitizeInput(document.getElementById('new-customer-qid').value),
                 vehiclePlate: vehiclePlate,
-                affiliateCode: customerAffiliateCode,
+                affiliateCode: customerAffiliateCodeInput,
                 referredBy: validReferrerCode,
                 referredCustomers: [],
                 accountBalance: 0,
