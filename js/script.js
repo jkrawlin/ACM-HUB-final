@@ -1854,8 +1854,8 @@ async function saveNewSale() {
                 }
             }
             
-            // Get the customer affiliate code from the input field
-            const customerAffiliateCodeInput = sanitizeInput(document.getElementById('new-customer-affiliate-code').value);
+            // Get the customer affiliate code from the existing input field
+            const customerAffiliateCodeInput = sanitizeInput(document.getElementById('sale-customer-code').value);
             
             if (!customerAffiliateCodeInput) {
                 showAlert('Please enter the customer affiliate code from their card.', 'error');
