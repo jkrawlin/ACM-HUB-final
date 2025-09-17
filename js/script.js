@@ -54,6 +54,8 @@ function showAlert(message, type = 'success') {
 // Load all data from Firestore on app load
 async function loadDataFromFirestore() {
     try {
+        showAlert('Loading data from database...', 'info');
+        
         // Load customers
         const customersSnapshot = await db.collection('customers').get();
         customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -62,8 +64,14 @@ async function loadDataFromFirestore() {
         const salesSnapshot = await db.collection('sales').get();
         sales = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Load referrals (derive from customers/sales, or store separately if needed)
-        updateReferralsFromData();
+        // Load referrals from Firestore
+        const referralsSnapshot = await db.collection('referrals').get();
+        referrals = referralsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // If no referrals exist in database, generate them from customer data
+        if (referrals.length === 0) {
+            await updateReferralsFromData();
+        }
 
         // Load affiliate codes
         const codesSnapshot = await db.collection('affiliateCodes').get();
@@ -75,7 +83,14 @@ async function loadDataFromFirestore() {
         renderReferralsTable(referrals);
         renderCodesTable();
 
-        showAlert('Data loaded successfully!');
+        console.log('Data loaded from Firestore:', {
+            customers: customers.length,
+            sales: sales.length,
+            referrals: referrals.length,
+            affiliateCodes: affiliateCodes.length
+        });
+
+        showAlert('Data loaded successfully!', 'success');
     } catch (error) {
         console.error('Error loading data:', error);
         showAlert('Failed to load data from Firestore. Starting with empty collections.', 'error');
@@ -112,34 +127,63 @@ async function saveDataToFirestore() {
     }
 }
 
-// Update referrals derived data
-function updateReferralsFromData() {
-    referrals = customers.map(customer => {
-        const customerSales = sales.filter(sale => sale.customerId === customer.id);
-        const totalSalesAmount = customerSales.reduce((total, sale) => {
-            const amount = parseFloat(sale.amount.replace('QR ', '')) || 0;
-            return total + amount;
-        }, 0);
-        
-        const totalCommissions = customerSales.reduce((total, sale) => {
-            if (sale.commission) {
-                const commission = parseFloat(sale.commission.replace('QR ', '')) || 0;
-                return total + commission;
-            }
-            return total;
-        }, 0);
-        
-        return {
-            id: customer.id,
-            referrer: customer.name,
-            code: customer.affiliateCode || 'N/A',
-            totalReferrals: customer.referredCustomers ? customer.referredCustomers.length : 0,
-            referredCustomers: customer.referredCustomers || [],
-            totalSales: `QR ${totalSalesAmount.toFixed(2)}`,
-            commissionEarned: `QR ${(customer.accountBalance || 0).toFixed(2)}`,
-            status: customer.accountBalance > 0 ? 'Pending' : 'N/A'
-        };
-    }).filter(r => r.totalReferrals > 0);
+// Update referrals derived data and save to Firestore
+async function updateReferralsFromData() {
+    try {
+        const newReferrals = customers.map(customer => {
+            const customerSales = sales.filter(sale => sale.customerId === customer.id);
+            const totalSalesAmount = customerSales.reduce((total, sale) => {
+                const amount = parseFloat(sale.amount.replace('QR ', '')) || 0;
+                return total + amount;
+            }, 0);
+            
+            const totalCommissions = customerSales.reduce((total, sale) => {
+                if (sale.commission) {
+                    const commission = parseFloat(sale.commission.replace('QR ', '')) || 0;
+                    return total + commission;
+                }
+                return total;
+            }, 0);
+            
+            return {
+                id: customer.id,
+                referrer: customer.name,
+                code: customer.affiliateCode || 'N/A',
+                totalReferrals: customer.referredCustomers ? customer.referredCustomers.length : 0,
+                referredCustomers: customer.referredCustomers || [],
+                totalSales: `QR ${totalSalesAmount.toFixed(2)}`,
+                commissionEarned: `QR ${(customer.accountBalance || 0).toFixed(2)}`,
+                status: customer.accountBalance > 0 ? 'Pending' : 'N/A',
+                updatedAt: new Date().toISOString()
+            };
+        }).filter(r => r.totalReferrals > 0);
+
+        // Update local referrals array
+        referrals = newReferrals;
+
+        // Save to Firestore using batch operation
+        if (newReferrals.length > 0) {
+            const batch = db.batch();
+            
+            // Clear existing referrals first
+            const existingReferralsSnapshot = await db.collection('referrals').get();
+            existingReferralsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            // Add new referrals
+            newReferrals.forEach(referral => {
+                const docRef = db.collection('referrals').doc(referral.id.toString());
+                batch.set(docRef, referral);
+            });
+
+            await batch.commit();
+            console.log('Referrals saved to Firestore successfully');
+        }
+    } catch (error) {
+        console.error('Error updating referrals:', error);
+        showAlert('Error updating referrals: ' + error.message, 'error');
+    }
 }
 
 // Sample Data removed - now using Firestore as the only data source
@@ -599,7 +643,7 @@ async function loadDataFromFirestore() {
         renderSalesTable();
 
         // Update referrals from customer data
-        updateReferralsFromData();
+        await updateReferralsFromData();
         renderReferralsTable();
 
         // Load affiliateCodes
