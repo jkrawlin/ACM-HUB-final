@@ -1854,6 +1854,32 @@ async function saveNewSale() {
                 }
             }
             
+            // Generate affiliate code for new customer (use available codes)
+            let customerAffiliateCode;
+            
+            // Find an available affiliate code
+            const availableCode = affiliateCodes.find(c => c.status === 'available');
+            if (availableCode) {
+                customerAffiliateCode = availableCode.code;
+                // Mark the code as assigned
+                availableCode.status = 'assigned';
+                await db.collection('affiliateCodes').doc(availableCode.id.toString()).update({
+                    status: 'assigned'
+                });
+                showAlert(`Assigned affiliate code: ${customerAffiliateCode}`, 'success');
+            } else {
+                // If no available codes, generate a new one using the same function as addNewCustomer
+                const generateAffiliateCode = () => {
+                    let code;
+                    do {
+                        code = 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                    } while (customers.some(c => c.affiliateCode === code) || affiliateCodes.some(c => c.code === code));
+                    return code;
+                };
+                customerAffiliateCode = generateAffiliateCode();
+                showAlert(`No available affiliate codes. Generated new code: ${customerAffiliateCode}`, 'warning');
+            }
+            
             const newCustomer = {
                 id: Date.now(),  // Use timestamp as ID for uniqueness
                 name: name,
@@ -1861,7 +1887,7 @@ async function saveNewSale() {
                 phone: phone,
                 qid: sanitizeInput(document.getElementById('new-customer-qid').value),
                 vehiclePlate: vehiclePlate,
-                affiliateCode: 'AFF' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                affiliateCode: customerAffiliateCode,
                 referredBy: validReferrerCode,
                 referredCustomers: [],
                 accountBalance: 0,
