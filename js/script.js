@@ -27,19 +27,22 @@ const auth = firebase.auth(); // Auth instance for login
 const analytics = firebase.analytics();  // Analytics if you want to use it (optional)
 
 // Show alert function for user notifications
-function showAlert(message) {
+function showAlert(message, type = 'success') {
     // Create alert element if it doesn't exist
     let alertElement = document.getElementById('custom-alert');
     if (!alertElement) {
         alertElement = document.createElement('div');
         alertElement.id = 'custom-alert';
-        alertElement.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 max-w-sm';
+        alertElement.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 max-w-sm text-white';
         alertElement.style.display = 'none';
         document.body.appendChild(alertElement);
     }
 
-    // Set message and show
+    // Set message, color based on type, and show
     alertElement.textContent = message;
+    alertElement.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 max-w-sm text-white ${
+        type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+    }`;
     alertElement.style.display = 'block';
 
     // Auto-hide after 3 seconds
@@ -48,7 +51,99 @@ function showAlert(message) {
     }, 3000);
 }
 
-// Sample Data (moved outside DOMContentLoaded so it's available globally)
+// Load all data from Firestore on app load
+async function loadDataFromFirestore() {
+    try {
+        // Load customers
+        const customersSnapshot = await db.collection('customers').get();
+        customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Load sales
+        const salesSnapshot = await db.collection('sales').get();
+        sales = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Load referrals (derive from customers/sales, or store separately if needed)
+        updateReferralsFromData();
+
+        // Load affiliate codes
+        const codesSnapshot = await db.collection('affiliateCodes').get();
+        affiliateCodes = codesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Render tables
+        renderCustomerTable(customers, currentCustomerPage);
+        renderSalesTable(sales, currentSalesPage);
+        renderReferralsTable(referrals);
+        renderCodesTable();
+
+        showAlert('Data loaded successfully!');
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showAlert('Failed to load data. Using sample data.', 'error');
+        // Fallback to samples if needed
+    }
+}
+
+// Save all data to Firestore (call on changes)
+async function saveDataToFirestore() {
+    try {
+        // Save customers
+        const batch = db.batch();
+        customers.forEach(customer => {
+            const docRef = db.collection('customers').doc(customer.id.toString());
+            batch.set(docRef, customer);
+        });
+
+        // Save sales
+        sales.forEach(sale => {
+            const docRef = db.collection('sales').doc(sale.id.toString());
+            batch.set(docRef, sale);
+        });
+
+        // Save affiliate codes
+        affiliateCodes.forEach(code => {
+            const docRef = db.collection('affiliateCodes').doc(code.id.toString());
+            batch.set(docRef, code);
+        });
+
+        await batch.commit();
+    } catch (error) {
+        console.error('Error saving data:', error);
+        showAlert('Failed to save data.', 'error');
+    }
+}
+
+// Update referrals derived data
+function updateReferralsFromData() {
+    referrals = customers.map(customer => {
+        const customerSales = sales.filter(sale => sale.customerId === customer.id);
+        const totalSalesAmount = customerSales.reduce((total, sale) => {
+            const amount = parseFloat(sale.amount.replace('QR ', '')) || 0;
+            return total + amount;
+        }, 0);
+        
+        const totalCommissions = customerSales.reduce((total, sale) => {
+            if (sale.commission) {
+                const commission = parseFloat(sale.commission.replace('QR ', '')) || 0;
+                return total + commission;
+            }
+            return total;
+        }, 0);
+        
+        return {
+            id: customer.id,
+            referrer: customer.name,
+            code: customer.affiliateCode || 'N/A',
+            totalReferrals: customer.referredCustomers ? customer.referredCustomers.length : 0,
+            referredCustomers: customer.referredCustomers || [],
+            totalSales: `QR ${totalSalesAmount.toFixed(2)}`,
+            commissionEarned: `QR ${(customer.accountBalance || 0).toFixed(2)}`,
+            status: customer.accountBalance > 0 ? 'Pending' : 'N/A'
+        };
+    }).filter(r => r.totalReferrals > 0);
+}
+
+// Sample Data (commented out - now using Firestore as primary data source)
+// These samples are only used as fallback if Firestore is empty
 const sampleCustomers = [
     { id: 1, name: 'Ahmed Mohamed', email: 'ahmed@example.com', phone: '555123456', qid: '123456789012', vehiclePlate: 'ABC-1234', affiliateCode: 'AFF1234', referredBy: null, referredCustomers: [2, 3, 4], accountBalance: 120.00, notes: 'Loyal customer' },
     { id: 2, name: 'Fatima Ali', email: 'fatima@example.com', phone: '555987654', qid: '987654321098', vehiclePlate: 'XYZ-5678', affiliateCode: 'AFF5678', referredBy: 'AFF1234', referredCustomers: [], accountBalance: 50.00, notes: '' },
@@ -65,13 +160,8 @@ const sampleSales = [
     { id: 5, date: '2023-05-19', invoice: 'INV-005', customer: 'Khalid Ibrahim', customerId: 5, services: 'Battery Replacement', servicesList: [{ name: 'Battery Replacement', price: 280, quantity: 1 }], amount: 'QR 280', referral: 'AFF3456', commission: 'QR 8.40', discount: 0 }
 ];
 
-const sampleReferrals = [
-    { id: 1, referrer: 'Ahmed Mohamed', code: 'AFF1234', totalReferrals: 3, referredCustomers: [2, 3, 4], totalSales: 'QR 1400.00', commissionEarned: 'QR 42.00', status: 'Pending' },
-    { id: 2, referrer: 'Fatima Ali', code: 'AFF5678', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 450.00', commissionEarned: 'QR 0.00', status: 'N/A' },
-    { id: 3, referrer: 'Mohammed Hassan', code: 'AFF9012', totalReferrals: 1, referredCustomers: [5], totalSales: 'QR 800.00', commissionEarned: 'QR 24.00', status: 'Paid' },
-    { id: 4, referrer: 'Mariam Abdullah', code: 'AFF3456', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 150.00', commissionEarned: 'QR 4.50', status: 'Pending' },
-    { id: 5, referrer: 'Khalid Ibrahim', code: 'AFF7890', totalReferrals: 0, referredCustomers: [], totalSales: 'QR 280.00', commissionEarned: 'QR 0.00', status: 'N/A' }
-];
+// Referrals are now derived from customer data, not stored separately
+// const sampleReferrals = [...] - Removed, now using updateReferralsFromData()
 
 // Global variables for table rendering
 let customers = [];
@@ -464,65 +554,51 @@ function updateCodesCount() {
     }
 }
 
-// Move loadDataFromFirestore outside of DOMContentLoaded so it can be called from auth.onAuthStateChanged
-function loadDataFromFirestore() {
-    // Load customers
-    db.collection('customers').get().then(snapshot => {
-        customers = [];
-        if (snapshot.empty) {
+// Updated loadDataFromFirestore function to use proper document mapping
+async function loadDataFromFirestore() {
+    try {
+        // Load customers
+        const customersSnapshot = await db.collection('customers').get();
+        if (customersSnapshot.empty) {
             customers = sampleCustomers; // Fallback to sample
-            saveDataToFirestore(); // Seed sample data to Firestore
+            // Seed sample data to Firestore
+            const batch = db.batch();
+            customers.forEach(customer => {
+                const docRef = db.collection('customers').doc(customer.id.toString());
+                batch.set(docRef, customer);
+            });
+            await batch.commit();
         } else {
-            snapshot.forEach(doc => customers.push(doc.data()));
+            customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
         renderCustomerTable();
-    }).catch(error => {
-        showAlert('Error loading customers: ' + error.message);
-        customers = sampleCustomers; // Fallback on error
-        renderCustomerTable();
-    });
 
-    // Load sales
-    db.collection('sales').get().then(snapshot => {
-        sales = [];
-        if (snapshot.empty) {
+        // Load sales
+        const salesSnapshot = await db.collection('sales').get();
+        if (salesSnapshot.empty) {
             sales = sampleSales;
-            saveDataToFirestore();
+            const batch = db.batch();
+            sales.forEach(sale => {
+                const docRef = db.collection('sales').doc(sale.id.toString());
+                batch.set(docRef, sale);
+            });
+            await batch.commit();
         } else {
-            snapshot.forEach(doc => sales.push(doc.data()));
+            sales = salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
         renderSalesTable();
-    }).catch(error => {
-        showAlert('Error loading sales: ' + error.message);
-        sales = sampleSales;
-        renderSalesTable();
-    });
 
-    // Load referrals
-    db.collection('referrals').get().then(snapshot => {
-        referrals = [];
-        if (snapshot.empty) {
-            referrals = sampleReferrals;
-            saveDataToFirestore();
-        } else {
-            snapshot.forEach(doc => referrals.push(doc.data()));
-        }
+        // Update referrals from customer data
+        updateReferralsFromData();
         renderReferralsTable();
-    }).catch(error => {
-        showAlert('Error loading referrals: ' + error.message);
-        referrals = sampleReferrals;
-        renderReferralsTable();
-    });
 
-    // Load affiliateCodes
-    db.collection('affiliateCodes').get().then(snapshot => {
-        affiliateCodes = [];
-        if (snapshot.empty) {
+        // Load affiliateCodes
+        const codesSnapshot = await db.collection('affiliateCodes').get();
+        if (codesSnapshot.empty) {
             affiliateCodes = []; // No sample for affiliateCodes, start empty
-            saveDataToFirestore();
         } else {
-            snapshot.forEach(doc => {
-                const code = doc.data();
+            affiliateCodes = codesSnapshot.docs.map(doc => {
+                const code = { id: doc.id, ...doc.data() };
                 // Ensure all codes have a creation date
                 if (!code.createdAt) {
                     code.createdAt = getTodayStr();
@@ -531,34 +607,40 @@ function loadDataFromFirestore() {
                 if (!code.usedInSales) {
                     code.usedInSales = [];
                 }
-                affiliateCodes.push(code);
+                return code;
             });
-            // Save back to ensure all codes have proper structure
-            saveDataToFirestore();
         }
         renderCodesTable();
         updateCodesCount();
-    }).catch(error => {
-        showAlert('Error loading affiliate codes: ' + error.message);
-        affiliateCodes = [];
-        renderCodesTable();
-        updateCodesCount();
-    });
 
-    // Load commission rate
-    db.collection('settings').doc('commission').get().then(doc => {
-        if (doc.exists) {
-            commissionRate = doc.data().rate || 3;
+        // Load commission rate
+        const commissionDoc = await db.collection('settings').doc('commission').get();
+        if (commissionDoc.exists) {
+            commissionRate = commissionDoc.data().rate || 3;
         } else {
             commissionRate = 3;
-            saveDataToFirestore();
+            await db.collection('settings').doc('commission').set({ rate: commissionRate });
         }
-        document.getElementById('commission-rate').value = commissionRate;
-    }).catch(error => {
-        showAlert('Error loading commission rate: ' + error.message);
-        commissionRate = 3;
-        document.getElementById('commission-rate').value = commissionRate;
-    });
+        const commissionElement = document.getElementById('commission-rate');
+        if (commissionElement) {
+            commissionElement.value = commissionRate;
+        }
+
+        showAlert('Data loaded successfully!');
+    } catch (error) {
+        console.error('Error loading data:', error);
+        showAlert('Error loading data: ' + error.message, 'error');
+        // Fallback to sample data
+        customers = sampleCustomers;
+        sales = sampleSales;
+        affiliateCodes = [];
+        updateReferralsFromData();
+        renderCustomerTable();
+        renderSalesTable();
+        renderReferralsTable();
+        renderCodesTable();
+        updateCodesCount();
+    }
 }
 
 // Input sanitization helper
@@ -643,10 +725,15 @@ auth.onAuthStateChanged(user => {
         document.getElementById('login-page').style.display = 'flex';
         document.getElementById('app-container').style.display = 'none';
         // Clear tables or hide content
-        document.getElementById('customer-table-body').innerHTML = '<tr><td colspan="9" class="py-4 text-center text-gray-500">Login required</td></tr>';
-        document.getElementById('sales-table-body').innerHTML = '<tr><td colspan="7" class="py-4 text-center text-gray-500">Login required</td></tr>';
-        document.getElementById('referrals-table-body').innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Login required</td></tr>';
-        document.getElementById('codes-table-body').innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Login required</td></tr>';
+        const customerTableBody = document.getElementById('customer-table-body');
+        const salesTableBody = document.getElementById('sales-table-body');
+        const referralsTableBody = document.getElementById('referrals-table-body');
+        const codesTableBody = document.getElementById('codes-table-body');
+        
+        if (customerTableBody) customerTableBody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-gray-500">Login required</td></tr>';
+        if (salesTableBody) salesTableBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-gray-500">Login required</td></tr>';
+        if (referralsTableBody) referralsTableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Login required</td></tr>';
+        if (codesTableBody) codesTableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Login required</td></tr>';
     }
 });
 
@@ -1056,40 +1143,62 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Generate a single new affiliate code
-function generateNewCode() {
-    const newCode = {
-        code: generateRandomCode(),
-        status: 'available',
-        usedInSales: [],
-        createdAt: getTodayStr()
-    };
-    
-    affiliateCodes.push(newCode);
-    saveDataToFirestore();
-    renderCodesTable();
-    updateCodesCount();
-    showAlert('New affiliate code generated successfully!');
-}
-
-// Generate multiple affiliate codes
-function generateMultipleCodes(count) {
-    const newCodes = [];
-    const today = getTodayStr();
-    
-    for (let i = 0; i < count; i++) {
-        newCodes.push({
+async function generateNewCode() {
+    try {
+        const newCode = {
+            id: Date.now(),
             code: generateRandomCode(),
             status: 'available',
             usedInSales: [],
-            createdAt: today
-        });
+            createdAt: getTodayStr()
+        };
+        
+        // Save to Firestore
+        await db.collection('affiliateCodes').doc(newCode.id.toString()).set(newCode);
+        
+        affiliateCodes.push(newCode);
+        renderCodesTable();
+        updateCodesCount();
+        showAlert('New affiliate code generated successfully!');
+    } catch (error) {
+        console.error('Error generating code:', error);
+        showAlert('Error generating affiliate code: ' + error.message, 'error');
     }
-    
-    affiliateCodes.push(...newCodes);
-    saveDataToFirestore();
-    renderCodesTable();
-    updateCodesCount();
-    showAlert(`Generated ${count} new affiliate codes successfully!`);
+}
+
+// Generate multiple affiliate codes
+async function generateMultipleCodes(count) {
+    try {
+        const newCodes = [];
+        const today = getTodayStr();
+        const batch = db.batch();
+        
+        for (let i = 0; i < count; i++) {
+            const newCode = {
+                id: Date.now() + i, // Ensure unique IDs
+                code: generateRandomCode(),
+                status: 'available',
+                usedInSales: [],
+                createdAt: today
+            };
+            newCodes.push(newCode);
+            
+            // Add to batch
+            const docRef = db.collection('affiliateCodes').doc(newCode.id.toString());
+            batch.set(docRef, newCode);
+        }
+        
+        // Commit batch
+        await batch.commit();
+        
+        affiliateCodes.push(...newCodes);
+        renderCodesTable();
+        updateCodesCount();
+        showAlert(`Generated ${count} new affiliate codes successfully!`);
+    } catch (error) {
+        console.error('Error generating multiple codes:', error);
+        showAlert('Error generating affiliate codes: ' + error.message, 'error');
+    }
 }
 
 // Generate a random affiliate code
@@ -1149,35 +1258,43 @@ function clearAllFilters() {
     renderCodesTable();
 }
 
-// Save data to Firestore (updated to handle affiliate codes properly)
-function saveDataToFirestore() {
-    // Save customers
-    customers.forEach(customer => {
-        db.collection('customers').doc(customer.id.toString()).set(customer);
-    });
+// Save data to Firestore (legacy function - updating to use new approach)
+async function saveDataToFirestoreOld() {
+    try {
+        const batch = db.batch();
+        
+        // Save customers
+        customers.forEach(customer => {
+            const docRef = db.collection('customers').doc(customer.id.toString());
+            batch.set(docRef, customer);
+        });
 
-    // Save sales
-    sales.forEach(sale => {
-        db.collection('sales').doc(sale.id.toString()).set(sale);
-    });
+        // Save sales
+        sales.forEach(sale => {
+            const docRef = db.collection('sales').doc(sale.id.toString());
+            batch.set(docRef, sale);
+        });
 
-    // Save referrals
-    referrals.forEach(referral => {
-        db.collection('referrals').doc(referral.id.toString()).set(referral);
-    });
+        // Save affiliate codes with proper structure
+        affiliateCodes.forEach((code, index) => {
+            const codeWithId = {
+                id: code.id || (index + 1),
+                ...code,
+                createdAt: code.createdAt || getTodayStr() // Ensure all codes have a creation date
+            };
+            const docRef = db.collection('affiliateCodes').doc(codeWithId.id.toString());
+            batch.set(docRef, codeWithId);
+        });
 
-    // Save affiliate codes with proper structure
-    affiliateCodes.forEach((code, index) => {
-        const codeWithId = {
-            id: index + 1,
-            ...code,
-            createdAt: code.createdAt || getTodayStr() // Ensure all codes have a creation date
-        };
-        db.collection('affiliateCodes').doc(codeWithId.id.toString()).set(codeWithId);
-    });
+        // Save commission rate
+        const settingsRef = db.collection('settings').doc('commission');
+        batch.set(settingsRef, { rate: commissionRate });
 
-    // Save commission rate
-    db.collection('settings').doc('commission').set({ rate: commissionRate });
+        await batch.commit();
+    } catch (error) {
+        console.error('Error saving data to Firestore:', error);
+        showAlert('Error saving data: ' + error.message, 'error');
+    }
 }
 
 // Customer button event listeners
@@ -1461,29 +1578,36 @@ function updateEditSaleTotal() {
 }
 
 // Form submission functions
-function saveCustomerChanges() {
-    const customerId = parseInt(document.getElementById('edit-customer-id').value);
-    const customerIndex = customers.findIndex(c => c.id === customerId);
-    
-    if (customerIndex !== -1) {
-        const customer = customers[customerIndex];
-        customer.name = sanitizeInput(document.getElementById('edit-customer-name').value);
-        customer.email = sanitizeInput(document.getElementById('edit-customer-email').value);
-        customer.phone = sanitizeInput(document.getElementById('edit-customer-phone').value);
-        customer.qid = sanitizeInput(document.getElementById('edit-customer-qid').value);
-        customer.vehiclePlate = sanitizeInput(document.getElementById('edit-customer-vehicle-plate').value);
-        customer.affiliateCode = sanitizeInput(document.getElementById('edit-customer-affiliate-code').value);
-        customer.accountBalance = parseFloat(document.getElementById('edit-customer-balance').value) || 0;
-        customer.notes = sanitizeInput(document.getElementById('edit-customer-notes').value);
+async function saveCustomerChanges() {
+    try {
+        const customerId = parseInt(document.getElementById('edit-customer-id').value);
+        const customerIndex = customers.findIndex(c => c.id === customerId);
         
-        // Update referred customers
-        const referredSelect = document.getElementById('edit-customer-referreds');
-        customer.referredCustomers = Array.from(referredSelect.selectedOptions).map(option => parseInt(option.value));
-        
-        saveDataToFirestore();
-        renderCustomerTable();
-        hideModal('edit-customer-modal');
-        showAlert('Customer updated successfully!');
+        if (customerIndex !== -1) {
+            const customer = customers[customerIndex];
+            customer.name = sanitizeInput(document.getElementById('edit-customer-name').value);
+            customer.email = sanitizeInput(document.getElementById('edit-customer-email').value);
+            customer.phone = sanitizeInput(document.getElementById('edit-customer-phone').value);
+            customer.qid = sanitizeInput(document.getElementById('edit-customer-qid').value);
+            customer.vehiclePlate = sanitizeInput(document.getElementById('edit-customer-vehicle-plate').value);
+            customer.affiliateCode = sanitizeInput(document.getElementById('edit-customer-affiliate-code').value);
+            customer.accountBalance = parseFloat(document.getElementById('edit-customer-balance').value) || 0;
+            customer.notes = sanitizeInput(document.getElementById('edit-customer-notes').value);
+            
+            // Update referred customers
+            const referredSelect = document.getElementById('edit-customer-referreds');
+            customer.referredCustomers = Array.from(referredSelect.selectedOptions).map(option => parseInt(option.value));
+            
+            // Save to Firestore
+            await db.collection('customers').doc(customer.id.toString()).set(customer);
+            
+            renderCustomerTable();
+            hideModal('edit-customer-modal');
+            showAlert('Customer updated successfully!');
+        }
+    } catch (error) {
+        console.error('Error saving customer changes:', error);
+        showAlert('Error updating customer: ' + error.message, 'error');
     }
 }
 
@@ -1529,12 +1653,15 @@ async function addNewCustomer() {
         if (assignedAffiliateCode) {
             // Check if the assigned code is valid and available
             const codeCheck = lookupAffiliateCodeForAssignment(assignedAffiliateCode);
-            if (codeCheck) {
+            if (codeCheck && codeCheck.status === 'available') {
                 customerAffiliateCode = assignedAffiliateCode;
                 // Mark the code as assigned in the affiliate codes list
                 const affiliateCodeObj = affiliateCodes.find(c => c.code === assignedAffiliateCode);
                 if (affiliateCodeObj) {
                     affiliateCodeObj.status = 'assigned';
+                    await db.collection('affiliateCodes').doc(affiliateCodeObj.id.toString()).update({
+                        status: 'assigned'
+                    });
                 }
             } else {
                 showAlert('Invalid or unavailable affiliate code. A new code will be generated.', 'warning');
@@ -1546,7 +1673,7 @@ async function addNewCustomer() {
         
         // Create new customer object
         const newCustomer = {
-            id: Math.max(...customers.map(c => c.id), 0) + 1,
+            id: Date.now(),  // Use timestamp as ID for uniqueness
             name: name,
             email: sanitizeInput(document.getElementById('add-customer-email').value),
             phone: phone,
@@ -1556,14 +1683,17 @@ async function addNewCustomer() {
             referredBy: null, // No referrer assignment during customer creation
             referredCustomers: [],
             accountBalance: 0,
-            notes: sanitizeInput(document.getElementById('add-customer-notes').value)
+            notes: sanitizeInput(document.getElementById('add-customer-notes').value),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Add customer to the array
+        // Save customer to Firestore
+        await db.collection('customers').doc(newCustomer.id.toString()).set(newCustomer);
+        
+        // Add customer to local array
         customers.push(newCustomer);
     
-        // Save to Firebase and update UI
-        saveDataToFirestore();
+        // Update UI
         renderCustomerTable();
         hideModal('add-customer-modal');
         
@@ -1666,7 +1796,7 @@ async function saveNewSale() {
             }
             
             const newCustomer = {
-                id: Math.max(...customers.map(c => c.id), 0) + 1,
+                id: Date.now(),  // Use timestamp as ID for uniqueness
                 name: name,
                 email: sanitizeInput(document.getElementById('new-customer-email').value),
                 phone: phone,
@@ -1676,9 +1806,12 @@ async function saveNewSale() {
                 referredBy: validReferrerCode,
                 referredCustomers: [],
                 accountBalance: 0,
-                notes: ''
+                notes: '',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             
+            // Save new customer to Firestore
+            await db.collection('customers').doc(newCustomer.id.toString()).set(newCustomer);
             customers.push(newCustomer);
             
             // Update referrer's referred customers list
@@ -1686,6 +1819,9 @@ async function saveNewSale() {
                 const referrer = customers.find(c => c.affiliateCode === validReferrerCode);
                 if (referrer && !referrer.referredCustomers.includes(newCustomer.id)) {
                     referrer.referredCustomers.push(newCustomer.id);
+                    await db.collection('customers').doc(referrer.id.toString()).update({
+                        referredCustomers: firebase.firestore.FieldValue.arrayUnion(newCustomer.id)
+                    });
                 }
             }
             
@@ -1725,49 +1861,50 @@ async function saveNewSale() {
 
         // Create new sale
         const newSale = {
-            id: Math.max(...sales.map(s => s.id), 0) + 1,
+            id: Date.now(),  // Use timestamp as ID for uniqueness
             date: saleDateInput.value,
-            invoice: 'INV-' + String(Math.max(...sales.map(s => s.id), 0) + 1).padStart(3, '0'),
+            invoice: 'INV-' + Date.now().toString().slice(-3),
             customer: customerName,
             customerId: customerId,
-            services: 'Service Details', // This would be populated from service rows
-            servicesList: [], // This would be populated from service rows
+            services: 'Service Details',  // From service rows
+            servicesList: [],  // From service rows
             amount: `QR ${finalTotal.toFixed(2)}`,
             referral: sanitizeInput(document.getElementById('sale-referral').value) || null,
-            commission: null, // Will be calculated below
-            discount: discount
+            commission: null,
+            discount: discount,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()  // For triggering
         };
 
-        // Calculate commission for customers with referrers (only if sale total > 0)
+        // Save sale to Firestore (this will trigger the Cloud Function)
+        await db.collection('sales').doc(newSale.id.toString()).set(newSale);
+
+        // Update customer balance if referral (but let function handle for consistency)
         const currentCustomer = customers.find(c => c.id === customerId);
         if (currentCustomer && currentCustomer.referredBy && finalTotal > 0) {
-            const referrer = customers.find(c => c.affiliateCode === currentCustomer.referredBy);
-            if (referrer) {
-                const commissionAmount = finalTotal * 0.03; // 3% commission
-                
-                // Update referrer's balance
-                referrer.accountBalance = (referrer.accountBalance || 0) + commissionAmount;
-                
-                // Set commission in sale record
-                newSale.commission = `QR ${commissionAmount.toFixed(2)}`;
-                
-                showAlert(`Commission QR ${commissionAmount.toFixed(2)} added to ${referrer.name}'s account for referring ${customerName}`, 'success');
-            }
+            const commissionAmount = finalTotal * 0.03;
+            const referrerRef = db.collection('customers').doc(currentCustomer.referredBy.toString());
+            await referrerRef.update({
+                accountBalance: firebase.firestore.FieldValue.increment(commissionAmount)
+            });
+            
+            // Set commission in sale record
+            newSale.commission = `QR ${commissionAmount.toFixed(2)}`;
+            await db.collection('sales').doc(newSale.id.toString()).update({
+                commission: newSale.commission
+            });
         }
-        
-        sales.push(newSale);
-        saveDataToFirestore();
-        renderSalesTable();
-        renderCustomerTable();
+
+        // Reload data and render
+        await loadDataFromFirestore();
         hideModal('new-sale-modal');
-        showAlert('New sale created successfully!');
+        showAlert('New sale created and commission processed!');
         
         // Reset form
         document.getElementById('new-sale-form').reset();
         
     } catch (error) {
-        console.error('Error in saveNewSale:', error);
-        showAlert('An error occurred while saving the sale. Please try again.', 'error');
+        console.error('Error saving sale:', error);
+        showAlert('Error saving sale: ' + error.message, 'error');
     }
 }
 
