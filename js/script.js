@@ -364,6 +364,9 @@ function renderCodesTable() {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-100 transition-colors';
         
+        // Find customer assigned to this code
+        const assignedCustomer = customers.find(c => c.affiliateCode === affiliateCode.code);
+        
         // Highlight search matches
         let codeDisplay = affiliateCode.code;
         let statusDisplay = affiliateCode.status;
@@ -374,12 +377,26 @@ function renderCodesTable() {
             statusDisplay = statusDisplay.replace(regex, '<mark class="bg-yellow-200 font-bold">$1</mark>');
         }
         
+        // Determine status color and info
+        let statusClass = 'bg-gray-100 text-gray-800';
+        let statusInfo = statusDisplay.charAt(0).toUpperCase() + statusDisplay.slice(1);
+        
+        if (affiliateCode.status === 'available') {
+            statusClass = 'bg-green-100 text-green-800';
+        } else if (affiliateCode.status === 'assigned' && assignedCustomer) {
+            statusClass = 'bg-blue-100 text-blue-800';
+            statusInfo = `Assigned to ${assignedCustomer.name}`;
+        } else if (affiliateCode.status === 'assigned') {
+            statusClass = 'bg-yellow-100 text-yellow-800';
+            statusInfo = 'Assigned (customer not found)';
+        }
+        
         row.innerHTML = `
             <td class="py-3 px-4 border-b">${startIndex + index + 1}</td>
             <td class="py-3 px-4 border-b font-mono font-bold">${codeDisplay}</td>
             <td class="py-3 px-4 border-b">
-                <span class="px-2 py-1 rounded-full text-xs ${affiliateCode.status === 'available' ? 'bg-green-100 text-green-800' : affiliateCode.status === 'assigned' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}">
-                    ${statusDisplay.charAt(0).toUpperCase() + statusDisplay.slice(1)}
+                <span class="px-2 py-1 rounded-full text-xs ${statusClass}" title="${assignedCustomer ? `Assigned to: ${assignedCustomer.name} (${assignedCustomer.phone})` : statusInfo}">
+                    ${statusInfo}
                 </span>
             </td>
             <td class="py-3 px-4 border-b">
@@ -395,6 +412,10 @@ function renderCodesTable() {
                     ${affiliateCode.usedInSales && affiliateCode.usedInSales.length > 0 ? 
                         `<button class="view-usage-btn text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors" data-code="${affiliateCode.code}" aria-label="View usage details" title="View usage details">
                             <i class="fas fa-eye"></i>
+                        </button>` : ''}
+                    ${assignedCustomer ? 
+                        `<button class="view-customer-btn text-purple-600 hover:text-purple-800 p-1 rounded hover:bg-purple-50 transition-colors" data-customer-id="${assignedCustomer.id}" aria-label="View customer details" title="View assigned customer: ${assignedCustomer.name}">
+                            <i class="fas fa-user"></i>
                         </button>` : ''}
                 </div>
             </td>
@@ -435,6 +456,34 @@ function renderCodesTable() {
             if (affiliateCode && affiliateCode.usedInSales) {
                 const usageDetails = affiliateCode.usedInSales.join(', ');
                 showAlert(`Code "${code}" used in: ${usageDetails}`);
+            }
+        });
+    });
+
+    // Add event listeners for view customer buttons
+    document.querySelectorAll('.view-customer-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const customerId = parseInt(e.currentTarget.getAttribute('data-customer-id'));
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                // Switch to customers tab and highlight the customer
+                const customersTab = document.querySelector('[data-tab="customers"]');
+                const customerTab = document.getElementById('customers');
+                
+                // Activate customers tab
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active-tab');
+                    btn.setAttribute('aria-selected', 'false');
+                });
+                customersTab.classList.add('active-tab');
+                customersTab.setAttribute('aria-selected', 'true');
+                
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                customerTab.classList.add('active');
+                
+                showAlert(`Viewing customer: ${customer.name} (${customer.affiliateCode})`);
             }
         });
     });
@@ -1652,23 +1701,26 @@ async function addNewCustomer() {
         
         if (assignedAffiliateCode) {
             // Check if the assigned code is valid and available
-            const codeCheck = lookupAffiliateCodeForAssignment(assignedAffiliateCode);
-            if (codeCheck && codeCheck.status === 'available') {
+            const affiliateCodeObj = affiliateCodes.find(c => c.code === assignedAffiliateCode);
+            if (affiliateCodeObj && affiliateCodeObj.status === 'available') {
                 customerAffiliateCode = assignedAffiliateCode;
                 // Mark the code as assigned in the affiliate codes list
-                const affiliateCodeObj = affiliateCodes.find(c => c.code === assignedAffiliateCode);
-                if (affiliateCodeObj) {
-                    affiliateCodeObj.status = 'assigned';
-                    await db.collection('affiliateCodes').doc(affiliateCodeObj.id.toString()).update({
-                        status: 'assigned'
-                    });
-                }
+                affiliateCodeObj.status = 'assigned';
+                await db.collection('affiliateCodes').doc(affiliateCodeObj.id.toString()).update({
+                    status: 'assigned'
+                });
+                showAlert(`Assigned existing affiliate code: ${assignedAffiliateCode}`, 'success');
+            } else if (affiliateCodeObj && affiliateCodeObj.status !== 'available') {
+                showAlert(`Affiliate code "${assignedAffiliateCode}" is not available (Status: ${affiliateCodeObj.status}). Please choose a different code.`, 'error');
+                return;
             } else {
-                showAlert('Invalid or unavailable affiliate code. A new code will be generated.', 'warning');
-                customerAffiliateCode = generateAffiliateCode();
+                showAlert(`Affiliate code "${assignedAffiliateCode}" does not exist. Please choose a valid code from the affiliate codes section.`, 'error');
+                return;
             }
         } else {
+            // Generate new code only if no code was provided
             customerAffiliateCode = generateAffiliateCode();
+            showAlert(`Generated new affiliate code: ${customerAffiliateCode}`, 'success');
         }
         
         // Create new customer object
@@ -1695,6 +1747,7 @@ async function addNewCustomer() {
     
         // Update UI
         renderCustomerTable();
+        renderCodesTable(); // Re-render codes table to show updated status
         hideModal('add-customer-modal');
         
         // Clear form
@@ -2010,26 +2063,26 @@ function lookupAffiliateCodeForAssignment(code) {
         return clearAffiliateCodeFeedback();
     }
     
-    const trimmedCode = code.trim();
+    const trimmedCode = code.trim().toUpperCase(); // Make search case-insensitive
     
     // Check if the code exists in the affiliate codes list
     const affiliateCodeExists = affiliateCodes.find(codeObj => 
-        codeObj.code.toLowerCase() === trimmedCode.toLowerCase()
+        codeObj.code.toUpperCase() === trimmedCode
     );
     
     if (affiliateCodeExists) {
         if (affiliateCodeExists.status === 'available') {
-            showAffiliateCodeFeedback('success', `Available code: ${affiliateCodeExists.code}`, 'Ready to assign');
+            showAffiliateCodeFeedback('success', `✓ Available code: ${affiliateCodeExists.code}`, 'Ready to assign to customer');
             return affiliateCodeExists;
         } else {
-            showAffiliateCodeFeedback('warning', `Code: ${affiliateCodeExists.code}`, `Status: ${affiliateCodeExists.status}`);
+            showAffiliateCodeFeedback('warning', `Code: ${affiliateCodeExists.code}`, `Status: ${affiliateCodeExists.status} (Not available)`);
             return affiliateCodeExists;
         }
     }
     
     // Check if a customer already has this code
     const customerWithCode = customers.find(c => 
-        c.affiliateCode && c.affiliateCode.toLowerCase() === trimmedCode.toLowerCase()
+        c.affiliateCode && c.affiliateCode.toUpperCase() === trimmedCode
     );
     
     if (customerWithCode) {
@@ -2037,8 +2090,8 @@ function lookupAffiliateCodeForAssignment(code) {
         return null;
     }
     
-    // Code not found
-    showAffiliateCodeFeedback('error', 'Code not found', 'This affiliate code does not exist');
+    // Code not found in affiliate codes list
+    showAffiliateCodeFeedback('error', 'Code not found', 'This code does not exist in the affiliate codes section');
     return null;
 }
 
